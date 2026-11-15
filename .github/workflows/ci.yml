@@ -11,3 +11,48 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: Committed sample outputs are up to date
+        run: git diff --exit-code samples/outputs
+
+  evals:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run eval:export
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: evals/requirements.txt
+      - run: pip install -r evals/requirements.txt
+      - run: pytest evals -q
+        env:
+          DEEPEVAL_TELEMETRY_OPT_OUT: 'YES'
+
+  docker:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Configure mock LLM and fixture clock
+        run: printf 'LLM_MODE=mock\nAGENT_CLOCK=2026-11-10T10:00:00Z\n' > .env
+      - name: Build and start the API (waits for the healthcheck)
+        run: docker compose up -d --build --wait --wait-timeout 120 api
+      - name: Smoke test
+        run: |
+          curl -fsS http://127.0.0.1:3000/healthz | jq -e '.ok == true'
+          curl -fsS -X POST http://127.0.0.1:3000/v1/refund-requests \
+            -H 'content-type: application/json' \
+            --data @samples/inputs/01-damaged-item-auto-approve.json \
+            | tee response.json \
+            | jq -e '.decision == "AUTO_APPROVE" and .refundAmount == 45'
+      - name: API logs
+        if: failure()
+        run: docker compose logs api
+      - name: Stop the API
+        if: always()
+        run: docker compose down -v
