@@ -1,0 +1,6 @@
+node_modules/
+.env
+traces/
+data/runtime/
+coverage/
+*.log
