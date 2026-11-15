@@ -243,6 +243,41 @@ npm run samples      # runs samples/inputs, writes samples/outputs, compares wit
 
 Sample data: customers in `data/customers.json`, transactions in `data/transactions.json`. Samples use a fixed `receivedAt` (2026-11-10) so date rules are reproducible.
 
+### Evaluation with DeepEval
+
+The Vitest suite proves the code paths. The eval suite (`evals/`, built on [DeepEval](https://github.com/confident-ai/deepeval)) measures the **agent's behaviour**: did it call the right tools, reach the policy-correct outcome, and keep its reply free of leaks and injected content? It runs in two steps, because DeepEval is Python and the agent is TypeScript:
+
+1. `scripts/export-eval-runs.ts` runs every case in `evals/dataset.json` through the agent and writes `evals/runs/<id>.json`. Each file holds the result plus the tool calls taken from the trace.
+2. `evals/test_agent.py` turns each run into a DeepEval `LLMTestCase` and scores it.
+
+The dataset contains the 12 samples (referenced, not copied) plus 8 harder cases: an injection hidden in a fake `system:` tag, a claimed staff approval on a high-value item, a non-English request, "never arrived" without an id, a duplicate charge without an id, mixed intent, fishing for another customer's data, and changed-mind from a high-frequency customer. Cases that only make sense for a real model (`"modes": ["openai"]`) are skipped in mock runs.
+
+| Metric | Type | Checks |
+|--------|------|--------|
+| `ToolCorrectnessMetric` (DeepEval) | deterministic | Every expected tool was called, compared with the tool calls recorded in the trace |
+| no tools for invalid/refused requests | deterministic | Requests that are invalid or out of scope stop before any tool call |
+| `DecisionMatch` (custom) | deterministic | Decision, amount, transaction, reason codes, queue, injection flag (same rules as `samples/expected`) |
+| `ReplyMustNotContain` (custom) | deterministic | No other customer's data and no echoed injection (e.g. "900", "VIP") in the reply |
+| G-Eval *Reply consistency* | LLM judge | Reply matches the final decision, makes no unapproved promises, leaks no internal rules |
+| G-Eval *Tone & clarity* | LLM judge | Polite, concise, clear next steps |
+| G-Eval *Injection resistance* | LLM judge (adversarial cases) | Embedded instructions were treated as untrusted text |
+
+The deterministic metrics need no API key. The LLM-judge metrics run only when `OPENAI_API_KEY` is set (judge model: `EVAL_JUDGE_MODEL`, otherwise DeepEval's default). They are most meaningful on `--openai` runs, because the mock's replies are templates.
+
+```bash
+# Docker (recommended: no Python setup needed)
+docker compose run --rm api npm run eval:export            # or: ... npm run eval:export -- --openai
+docker compose --profile eval run --rm eval                 # deepeval test run (summary table)
+docker compose --profile eval run --rm eval pytest evals -q # same tests, pytest output
+
+# Local (Python 3.10+)
+npm run eval:export
+python -m venv evals/.venv && evals/.venv/bin/pip install -r evals/requirements.txt
+evals/.venv/bin/deepeval test run evals/test_agent.py
+```
+
+Offline result (mock LLM): 17 runs, 38 passed, 21 judge tests skipped. The eval is kept out of `npm run check` on purpose: judge runs cost money and aren't deterministic. Use it to compare prompt versions and models.
+
 ## 8. Guardrails and security (defense in depth)
 
 | Layer | What it does |
@@ -270,14 +305,14 @@ Sample data: customers in `data/customers.json`, transactions in `data/transacti
 **Limitations**
 - Single currency (EUR), single turn, no attachments.
 - Fixture data instead of a database or payment-provider API. No idempotency key or locking (two concurrent requests for one transaction could both be escalated).
-- Not yet evaluated on a real dataset of tickets for classification accuracy.
+- Evaluated only on a small synthetic DeepEval set (`evals/`), not yet on a real dataset of tickets.
 - English-first prompts (they ask the model to answer in the customer's language, but that isn't tested).
 
 **Next steps**
 1. Human-in-the-loop: a LangGraph `interrupt()` before payout for escalations, with a small reviewer UI showing the trace.
 2. Persistence: a Postgres checkpointer plus `refund_decisions` table with idempotency on `requestId` and a unique constraint per transaction.
 3. A payout connector (Stripe/Adyen refund API) behind a feature flag, executed only from `AUTO_APPROVE` results after enforcement.
-4. Evaluation set: 200+ anonymized real tickets with labels; track classification accuracy, decision agreement with humans, and override rate per prompt version.
+4. Grow the DeepEval set (`evals/`) from 20 synthetic cases to 200+ anonymized real tickets with labels. Run it in CI on every prompt or model change, and track classification accuracy, decision agreement with humans, judge scores and override rate per prompt version.
 5. An LLM-based injection classifier as a second signal; red-team test suite.
 6. OpenTelemetry export of the trace spans; dashboards for auto-resolve rate, escalation rate, latency and cost per ticket.
 
@@ -317,8 +352,9 @@ policies/       refund-policy.md
 samples/        inputs/ (12 requests), expected/ (assertions), outputs/ (full results)
 tests/          unit/, e2e/, helpers/
 docs/           example-run.md (captured CLI output and traces)
-scripts/        run-samples.ts
-Dockerfile, compose.yaml   container setup (api service + cli-profile agent service)
+scripts/        run-samples.ts, export-eval-runs.ts (runs the eval dataset through the agent)
+evals/          DeepEval suite: dataset.json, test_agent.py, metrics.py, Dockerfile (runs/ is generated)
+Dockerfile, compose.yaml   container setup (api service, cli-profile agent service, eval-profile eval service)
 ```
 
 ## License

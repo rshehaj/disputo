@@ -12,8 +12,8 @@ WORKDIR /app
 ENV PORT=3000
 COPY --from=deps --chown=node:node /app/node_modules ./node_modules
 COPY --chown=node:node . .
-# Writable locations: per-request traces and the decision log.
-RUN mkdir -p traces data/runtime && chown node:node traces data/runtime
+# Writable locations: per-request traces, the decision log and exported eval runs.
+RUN mkdir -p traces data/runtime evals/runs && chown node:node traces data/runtime evals/runs
 USER node
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s \

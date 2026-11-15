@@ -10,3 +10,7 @@ coverage
 Dockerfile
 compose.yaml
 .dockerignore
+evals/runs
+evals/.venv
+**/__pycache__
+.deepeval

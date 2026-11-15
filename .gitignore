@@ -4,3 +4,9 @@ traces/
 data/runtime/
 coverage/
 *.log
+
+# DeepEval
+evals/runs/
+evals/.venv/
+__pycache__/
+.deepeval/

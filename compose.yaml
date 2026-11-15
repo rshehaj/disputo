@@ -1,14 +1,18 @@
 # Runs offline with the deterministic mock LLM by default.
 # Put OPENAI_API_KEY (and optionally LLM_MODE=openai) in .env to use OpenAI.
-x-app: &app
-  build: .
-  image: disputo:local
+x-env: &env
   env_file:
     - path: .env
       required: false
+
+x-app: &app
+  <<: *env
+  build: .
+  image: disputo:local
   volumes:
     - traces:/app/traces
     - decisions:/app/data/runtime
+    - evalruns:/app/evals/runs
 
 services:
   # HTTP API: POST /v1/refund-requests, GET /healthz
@@ -23,6 +27,20 @@ services:
     profiles: [cli]
     entrypoint: ["node_modules/.bin/tsx", "src/cli.ts"]
 
+  # DeepEval suite. Export runs first: docker compose run --rm api npm run eval:export [-- --openai]
+  # then: docker compose --profile eval run --rm eval
+  # LLM-judge metrics run only when OPENAI_API_KEY is set in .env.
+  eval:
+    <<: *env
+    profiles: [eval]
+    build:
+      context: .
+      dockerfile: evals/Dockerfile
+    image: disputo-eval:local
+    volumes:
+      - evalruns:/app/evals/runs:ro
+
 volumes:
   traces:
   decisions:
+  evalruns:
