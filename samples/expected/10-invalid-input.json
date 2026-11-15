@@ -1,0 +1,11 @@
+{
+  "decision": "INVALID_INPUT",
+  "status": "invalid_input",
+  "refundAmount": null,
+  "transactionId": null,
+  "reasonCodesInclude": [
+    "INVALID_INPUT"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false
+}

@@ -1,0 +1,12 @@
+{
+  "decision": "ESCALATE",
+  "status": "completed",
+  "refundAmount": 849,
+  "transactionId": "txn_1002",
+  "reasonCodesInclude": [
+    "ABOVE_AUTO_APPROVE_LIMIT"
+  ],
+  "humanReviewQueue": "refunds-l2",
+  "injectionFlagged": false,
+  "overrideFields": []
+}

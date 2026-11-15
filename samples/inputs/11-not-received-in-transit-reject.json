@@ -1,0 +1,7 @@
+{
+  "requestId": "req_11",
+  "customerEmail": "dritan.leka@example.com",
+  "message": "I ordered wireless headphones last week and they still haven't arrived. I want a refund.",
+  "channel": "email",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

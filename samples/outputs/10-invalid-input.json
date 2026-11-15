@@ -1,0 +1,44 @@
+{
+  "requestId": "req_10",
+  "status": "invalid_input",
+  "decision": "INVALID_INPUT",
+  "category": null,
+  "transactionId": null,
+  "refundAmount": null,
+  "currency": "EUR",
+  "reasonCodes": [
+    "INVALID_INPUT"
+  ],
+  "policyRefs": [],
+  "humanReview": {
+    "required": false,
+    "queue": null
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": null
+  },
+  "agentRationale": null,
+  "customerReply": null,
+  "validationErrors": [
+    "customerEmail: Invalid email address",
+    "transactionId: transactionId must look like \"txn_123\"",
+    "message: message is too short to act on"
+  ],
+  "summary": "Request req_10: INVALID_INPUT\nWhy: input failed validation\nGuardrails: none triggered\nValidation errors: customerEmail: Invalid email address; transactionId: transactionId must look like \"txn_123\"; message: message is too short to act on\nNext: Fix the input and resubmit.\nTrace: 0 LLM calls, 0 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 0,
+    "toolCalls": 0,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

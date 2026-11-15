@@ -1,0 +1,11 @@
+{
+  "decision": "NEED_MORE_INFO",
+  "status": "completed",
+  "refundAmount": null,
+  "transactionId": null,
+  "reasonCodesInclude": [
+    "CUSTOMER_NOT_FOUND"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false
+}

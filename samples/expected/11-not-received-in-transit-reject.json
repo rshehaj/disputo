@@ -1,0 +1,12 @@
+{
+  "decision": "REJECT",
+  "status": "completed",
+  "refundAmount": null,
+  "transactionId": "txn_1008",
+  "reasonCodesInclude": [
+    "SHIPMENT_STILL_IN_TRANSIT"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false,
+  "overrideFields": []
+}

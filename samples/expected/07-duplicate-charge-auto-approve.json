@@ -1,0 +1,12 @@
+{
+  "decision": "AUTO_APPROVE",
+  "status": "completed",
+  "refundAmount": 19.99,
+  "transactionId": "txn_1007",
+  "reasonCodesInclude": [
+    "DUPLICATE_CHARGE_VERIFIED"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false,
+  "overrideFields": []
+}

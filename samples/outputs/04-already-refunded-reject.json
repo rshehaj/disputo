@@ -1,0 +1,45 @@
+{
+  "requestId": "req_04",
+  "status": "completed",
+  "decision": "REJECT",
+  "category": "damaged_item",
+  "transactionId": "txn_1004",
+  "refundAmount": null,
+  "currency": "EUR",
+  "reasonCodes": [
+    "ALREADY_REFUNDED"
+  ],
+  "policyRefs": [
+    "RP-3"
+  ],
+  "humanReview": {
+    "required": false,
+    "queue": null
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": "llm"
+  },
+  "agentRationale": "Policy engine outcome \"reject\" (ALREADY_REFUNDED).",
+  "customerReply": {
+    "subject": "About your refund request",
+    "body": "Hello Clara,\n\nThank you for contacting us about your silicone phone case. We are unable to issue a refund at this time because this purchase has already been refunded. If you believe this is a mistake, reply to this email and a member of our team will take another look.\n\nKind regards,\nCustomer Care Team"
+  },
+  "validationErrors": [],
+  "summary": "Request req_04: REJECT on txn_1004 (damaged_item)\nWhy: transaction was already refunded [RP-3]\nGuardrails: none triggered\nNext: No refund; explanation reply is ready to send.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 8,
+    "toolCalls": 4,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

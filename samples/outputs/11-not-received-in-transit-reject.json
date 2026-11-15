@@ -1,0 +1,45 @@
+{
+  "requestId": "req_11",
+  "status": "completed",
+  "decision": "REJECT",
+  "category": "not_received",
+  "transactionId": "txn_1008",
+  "refundAmount": null,
+  "currency": "EUR",
+  "reasonCodes": [
+    "SHIPMENT_STILL_IN_TRANSIT"
+  ],
+  "policyRefs": [
+    "RP-7"
+  ],
+  "humanReview": {
+    "required": false,
+    "queue": null
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": "llm"
+  },
+  "agentRationale": "Policy engine outcome \"reject\" (SHIPMENT_STILL_IN_TRANSIT).",
+  "customerReply": {
+    "subject": "About your refund request",
+    "body": "Hello Dritan,\n\nThank you for contacting us about your wireless noise-cancelling headphones. We are unable to issue a refund at this time because your parcel is still on its way. It is expected to arrive by 14 November 2026. If it has not arrived by then, just reply to this email and we will look into it right away.\n\nKind regards,\nCustomer Care Team"
+  },
+  "validationErrors": [],
+  "summary": "Request req_11: REJECT on txn_1008 (not_received)\nWhy: parcel is still in transit within the delivery estimate [RP-7]\nGuardrails: none triggered\nNext: No refund; explanation reply is ready to send.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 8,
+    "toolCalls": 4,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

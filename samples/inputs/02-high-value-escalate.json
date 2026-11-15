@@ -1,0 +1,8 @@
+{
+  "requestId": "req_02",
+  "customerEmail": "ana.krasniqi@example.com",
+  "transactionId": "txn_1002",
+  "message": "The office chair I bought arrived damaged, one armrest is broken. I want my money back.",
+  "channel": "web_form",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

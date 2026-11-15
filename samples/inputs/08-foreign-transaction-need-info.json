@@ -1,0 +1,8 @@
+{
+  "requestId": "req_08",
+  "customerEmail": "dritan.leka@example.com",
+  "transactionId": "txn_1001",
+  "message": "My mug set arrived broken, please refund it.",
+  "channel": "email",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

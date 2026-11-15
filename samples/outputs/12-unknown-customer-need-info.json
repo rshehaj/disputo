@@ -1,0 +1,43 @@
+{
+  "requestId": "req_12",
+  "status": "completed",
+  "decision": "NEED_MORE_INFO",
+  "category": "damaged_item",
+  "transactionId": null,
+  "refundAmount": null,
+  "currency": "EUR",
+  "reasonCodes": [
+    "CUSTOMER_NOT_FOUND"
+  ],
+  "policyRefs": [],
+  "humanReview": {
+    "required": false,
+    "queue": null
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": "llm"
+  },
+  "agentRationale": "No verified transaction for this customer.",
+  "customerReply": {
+    "subject": "We need a bit more information",
+    "body": "Hello there,\n\nThank you for your message. Unfortunately we could not find an account linked to this email address. Please reply with the order or transaction number shown in your confirmation email, and make sure you write to us from the email address used for the purchase.\n\nKind regards,\nCustomer Care Team"
+  },
+  "validationErrors": [],
+  "summary": "Request req_12: NEED_MORE_INFO (damaged_item)\nWhy: no account for this e-mail address\nGuardrails: none triggered\nNext: Waiting for the customer to provide the missing details.\nTrace: 6 LLM calls, 2 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 6,
+    "toolCalls": 2,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

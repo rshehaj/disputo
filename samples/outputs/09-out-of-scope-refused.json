@@ -1,0 +1,43 @@
+{
+  "requestId": "req_09",
+  "status": "refused",
+  "decision": "REFUSED",
+  "category": null,
+  "transactionId": null,
+  "refundAmount": null,
+  "currency": "EUR",
+  "reasonCodes": [
+    "OUT_OF_SCOPE"
+  ],
+  "policyRefs": [],
+  "humanReview": {
+    "required": false,
+    "queue": null
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": "llm"
+  },
+  "agentRationale": null,
+  "customerReply": {
+    "subject": "How we can help",
+    "body": "Hello Ana,\n\nThanks for reaching out. This inbox handles refunds, returns and billing questions for your orders, so we are not able to help with this request. If you have a question about a purchase, just reply with the details.\n\nKind regards,\nCustomer Care Team"
+  },
+  "validationErrors": [],
+  "summary": "Request req_09: REFUSED\nWhy: request is not about refunds/billing\nGuardrails: none triggered\nNext: Out of scope; polite redirect reply drafted.\nTrace: 2 LLM calls, 0 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 2,
+    "toolCalls": 0,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

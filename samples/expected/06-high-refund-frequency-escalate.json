@@ -1,0 +1,12 @@
+{
+  "decision": "ESCALATE",
+  "status": "completed",
+  "refundAmount": 25,
+  "transactionId": "txn_1005",
+  "reasonCodesInclude": [
+    "HIGH_REFUND_FREQUENCY"
+  ],
+  "humanReviewQueue": "fraud-review",
+  "injectionFlagged": false,
+  "overrideFields": []
+}

@@ -1,0 +1,45 @@
+{
+  "requestId": "req_03",
+  "status": "completed",
+  "decision": "REJECT",
+  "category": "damaged_item",
+  "transactionId": "txn_1003",
+  "refundAmount": null,
+  "currency": "EUR",
+  "reasonCodes": [
+    "OUTSIDE_REFUND_WINDOW"
+  ],
+  "policyRefs": [
+    "RP-1"
+  ],
+  "humanReview": {
+    "required": false,
+    "queue": null
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": "llm"
+  },
+  "agentRationale": "Policy engine outcome \"reject\" (OUTSIDE_REFUND_WINDOW).",
+  "customerReply": {
+    "subject": "About your refund request",
+    "body": "Hello Clara,\n\nThank you for contacting us about your trail running shoes. We are unable to issue a refund at this time because the request was received after the refund period for this purchase ended. If you believe this is a mistake, reply to this email and a member of our team will take another look.\n\nKind regards,\nCustomer Care Team"
+  },
+  "validationErrors": [],
+  "summary": "Request req_03: REJECT on txn_1003 (damaged_item)\nWhy: purchase is outside the refund window [RP-1]\nGuardrails: none triggered\nNext: No refund; explanation reply is ready to send.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 8,
+    "toolCalls": 4,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

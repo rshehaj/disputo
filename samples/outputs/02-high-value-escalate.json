@@ -1,0 +1,45 @@
+{
+  "requestId": "req_02",
+  "status": "completed",
+  "decision": "ESCALATE",
+  "category": "damaged_item",
+  "transactionId": "txn_1002",
+  "refundAmount": 849,
+  "currency": "EUR",
+  "reasonCodes": [
+    "ABOVE_AUTO_APPROVE_LIMIT"
+  ],
+  "policyRefs": [
+    "RP-2"
+  ],
+  "humanReview": {
+    "required": true,
+    "queue": "refunds-l2"
+  },
+  "guardrails": {
+    "injectionFlagged": false,
+    "injectionSignals": [],
+    "overrides": [],
+    "replySource": "llm"
+  },
+  "agentRationale": "Policy engine outcome \"review\" (ABOVE_AUTO_APPROVE_LIMIT).",
+  "customerReply": {
+    "subject": "We are reviewing your refund request",
+    "body": "Hello Ana,\n\nThank you for your message about your ergonomic office chair. A specialist from our team will review your request and get back to you within 2 business days. You don't need to do anything else for now.\n\nKind regards,\nCustomer Care Team"
+  },
+  "validationErrors": [],
+  "summary": "Request req_02: ESCALATE 849.00 EUR on txn_1002 (damaged_item)\nWhy: amount is above the auto-approval limit [RP-2]\nHuman review: required, queue=refunds-l2\nGuardrails: none triggered\nNext: Queued for human review; holding reply sent to customer.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "trace": {
+    "traceId": "<varies>",
+    "llmCalls": 8,
+    "toolCalls": 4,
+    "durationMs": 0,
+    "file": null
+  },
+  "meta": {
+    "agentVersion": "0.1.0",
+    "promptVersion": "v1.2",
+    "llm": "mock",
+    "decidedAt": "<varies>"
+  }
+}

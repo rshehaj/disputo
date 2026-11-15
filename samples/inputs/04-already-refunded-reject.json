@@ -1,0 +1,8 @@
+{
+  "requestId": "req_04",
+  "customerEmail": "clara.meta@example.com",
+  "transactionId": "txn_1004",
+  "message": "My phone case was damaged when it arrived, I want a refund.",
+  "channel": "chat",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

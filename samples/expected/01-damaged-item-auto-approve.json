@@ -1,0 +1,12 @@
+{
+  "decision": "AUTO_APPROVE",
+  "status": "completed",
+  "refundAmount": 45,
+  "transactionId": "txn_1001",
+  "reasonCodesInclude": [
+    "WITHIN_POLICY"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false,
+  "overrideFields": []
+}

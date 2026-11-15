@@ -1,0 +1,8 @@
+{
+  "requestId": "req_06",
+  "customerEmail": "ben.hoxha@example.com",
+  "transactionId": "txn_1005",
+  "message": "I changed my mind about the cotton t-shirt, I don't want it anymore. Can I get a refund?",
+  "channel": "web_form",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

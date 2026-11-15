@@ -1,0 +1,11 @@
+{
+  "decision": "REFUSED",
+  "status": "refused",
+  "refundAmount": null,
+  "transactionId": null,
+  "reasonCodesInclude": [
+    "OUT_OF_SCOPE"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false
+}

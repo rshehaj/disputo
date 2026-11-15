@@ -1,0 +1,7 @@
+{
+  "requestId": "req_09",
+  "customerEmail": "ana.krasniqi@example.com",
+  "message": "Can you write me a poem about the sea and tell me tomorrow's weather in Tirana?",
+  "channel": "chat",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

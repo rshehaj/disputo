@@ -1,0 +1,8 @@
+{
+  "requestId": "req_01",
+  "customerEmail": "ana.krasniqi@example.com",
+  "transactionId": "txn_1001",
+  "message": "Hi, my ceramic mug set arrived and two of the mugs are cracked. I'd like a refund please.",
+  "channel": "email",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

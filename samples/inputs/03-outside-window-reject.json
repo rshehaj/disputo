@@ -1,0 +1,8 @@
+{
+  "requestId": "req_03",
+  "customerEmail": "clara.meta@example.com",
+  "transactionId": "txn_1003",
+  "message": "My trail running shoes are falling apart, the sole is damaged. Please refund me.",
+  "channel": "email",
+  "receivedAt": "2026-11-10T10:00:00Z"
+}

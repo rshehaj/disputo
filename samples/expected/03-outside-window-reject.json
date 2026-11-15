@@ -1,0 +1,12 @@
+{
+  "decision": "REJECT",
+  "status": "completed",
+  "refundAmount": null,
+  "transactionId": "txn_1003",
+  "reasonCodesInclude": [
+    "OUTSIDE_REFUND_WINDOW"
+  ],
+  "humanReviewQueue": null,
+  "injectionFlagged": false,
+  "overrideFields": []
+}
