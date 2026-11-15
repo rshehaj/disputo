@@ -1,0 +1,42 @@
+[
+  {
+    "id": "cus_001",
+    "email": "ana.krasniqi@example.com",
+    "name": "Ana Krasniqi",
+    "accountCreatedAt": "2024-03-01T10:00:00Z",
+    "refundsLast90Days": 0,
+    "chargebacksLast12Months": 0,
+    "riskFlag": false,
+    "tier": "gold"
+  },
+  {
+    "id": "cus_002",
+    "email": "ben.hoxha@example.com",
+    "name": "Ben Hoxha",
+    "accountCreatedAt": "2025-06-10T10:00:00Z",
+    "refundsLast90Days": 4,
+    "chargebacksLast12Months": 0,
+    "riskFlag": false,
+    "tier": "standard"
+  },
+  {
+    "id": "cus_003",
+    "email": "clara.meta@example.com",
+    "name": "Clara Meta",
+    "accountCreatedAt": "2023-01-15T10:00:00Z",
+    "refundsLast90Days": 0,
+    "chargebacksLast12Months": 0,
+    "riskFlag": false,
+    "tier": "standard"
+  },
+  {
+    "id": "cus_004",
+    "email": "dritan.leka@example.com",
+    "name": "Dritan Leka",
+    "accountCreatedAt": "2025-09-01T10:00:00Z",
+    "refundsLast90Days": 1,
+    "chargebacksLast12Months": 0,
+    "riskFlag": false,
+    "tier": "standard"
+  }
+]
