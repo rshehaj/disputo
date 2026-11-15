@@ -112,7 +112,7 @@ export class Repository {
     this.decisions.push(decision);
     if (this.decisionLogPath) {
       mkdirSync(dirname(this.decisionLogPath), { recursive: true });
-      appendFileSync(this.decisionLogPath, JSON.stringify(decision) + '\n');
+      appendFileSync(this.decisionLogPath, `${JSON.stringify(decision)}\n`);
     }
   }
 

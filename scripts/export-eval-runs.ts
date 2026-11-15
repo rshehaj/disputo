@@ -82,12 +82,12 @@ for (const c of cases) {
     toolsCalled,
     result,
   };
-  writeFileSync(join(OUT_DIR, `${c.id}.json`), JSON.stringify(run, null, 2) + '\n');
+  writeFileSync(join(OUT_DIR, `${c.id}.json`), `${JSON.stringify(run, null, 2)}\n`);
   written++;
   console.log(
     `OK    ${c.id.padEnd(36)} ${result.decision.padEnd(15)} tools=[${toolsCalled.map((t) => t.name).join(', ')}]`,
   );
 }
 
-writeFileSync(join(OUT_DIR, '_meta.json'), JSON.stringify({ mode, llm: deps.llm.name, cases: written, exportedAt: new Date().toISOString() }, null, 2) + '\n');
+writeFileSync(join(OUT_DIR, '_meta.json'), `${JSON.stringify({ mode, llm: deps.llm.name, cases: written, exportedAt: new Date().toISOString() }, null, 2)}\n`);
 console.log(`\nExported ${written} run(s) to ${OUT_DIR} (llm=${deps.llm.name})`);

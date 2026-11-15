@@ -14,6 +14,7 @@ export interface OpenAiClientOptions {
 const TRANSIENT_STATUS = new Set([408, 409, 429, 500, 502, 503, 504]);
 
 function toOpenAi(messages: ChatMessage[]): ChatCompletionMessageParam[] {
+  // biome-ignore lint/suspicious/useIterableCallbackReturn: the switch is exhaustive over ChatMessage['role'] (checked by tsc)
   return messages.map((m): ChatCompletionMessageParam => {
     switch (m.role) {
       case 'system':

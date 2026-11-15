@@ -40,14 +40,14 @@ async function main(argv: string[]): Promise<number> {
   const result = await runAgent(input, createDefaultDeps({ config }));
 
   if (flags.has('--json')) {
-    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   } else {
     const line = '─'.repeat(72);
     process.stdout.write(`${line}\n${result.summary}\n${line}\n`);
     if (result.customerReply) {
       process.stdout.write(`Customer reply (${result.guardrails.replySource}):\nSubject: ${result.customerReply.subject}\n\n${result.customerReply.body}\n${line}\n`);
     }
-    process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+    process.stdout.write(`${JSON.stringify(result, null, 2)}\n`);
   }
   return 0;
 }

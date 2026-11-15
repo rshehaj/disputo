@@ -32,7 +32,7 @@ for (const file of readdirSync('samples/inputs').filter((f) => f.endsWith('.json
   // Strip volatile fields so committed outputs are stable across runs.
   const stable = { ...result, trace: { ...result.trace, traceId: '<varies>', durationMs: 0, file: null }, meta: { ...result.meta, decidedAt: '<varies>' } };
   stable.summary = stable.summary.replace(/, \d+ ms \(/, ', <n> ms (');
-  if (!useOpenAi) writeFileSync(join('samples/outputs', file), JSON.stringify(stable, null, 2) + '\n');
+  if (!useOpenAi) writeFileSync(join('samples/outputs', file), `${JSON.stringify(stable, null, 2)}\n`);
 
   const problems = compareExpected(result, expected);
   if (problems.length) failures++;

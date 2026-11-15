@@ -62,6 +62,7 @@ export const INJECTION_THRESHOLD = 3;
 // Zero-width and bidi control characters often used to hide instructions.
 const INVISIBLE = /[​-‏‪-‮⁠-⁤﻿]/g;
 // ASCII control characters except \t \n \r
+// biome-ignore lint/suspicious/noControlCharactersInRegex: matching control characters is the point (they are stripped)
 const CONTROL = /[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F]/g;
 const DELIMITER_TAGS = /<\/?\s*(customer_message|request_context|findings|reply_context)\s*>/gi;
 

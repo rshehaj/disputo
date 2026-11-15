@@ -10,6 +10,8 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      - name: Lint
+        run: npm run lint -- --reporter=github
       - run: npm run check
       - name: Committed sample outputs are up to date
         run: git diff --exit-code samples/outputs

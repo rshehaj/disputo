@@ -5,7 +5,7 @@ An AI agent that handles customer refund requests from start to finish. It reads
 Built with **TypeScript · LangGraph.js · OpenAI (function calling) · Zod · pino · Vitest**. Runs fully offline with a deterministic mock LLM, so everything in this README can be checked without an API key.
 
 ```bash
-npm install && npm run check                 # typecheck + 129 tests + 12 sample scenarios
+npm install && npm run check                 # lint + typecheck + 129 tests + 12 sample scenarios
 # or, with only Docker installed:
 docker compose run --rm api npm run check
 ```
@@ -215,6 +215,7 @@ Every run returns one JSON object validated by `AgentResultSchema` (`src/types.t
 
 ```bash
 npm run check        # everything below in one go
+npm run lint         # Biome linter (lint:fix applies safe fixes)
 npm run typecheck    # tsc --strict, noUncheckedIndexedAccess
 npm test             # all 129 tests
 npm run test:unit    # unit tests only
