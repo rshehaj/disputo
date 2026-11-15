@@ -4,6 +4,10 @@ from pathlib import Path
 
 # Must be set before deepeval is imported anywhere.
 os.environ.setdefault("DEEPEVAL_TELEMETRY_OPT_OUT", "YES")
+# .env.example ships blank OPENAI_* lines; the agent treats blanks as unset, but the
+# OpenAI client would use e.g. OPENAI_BASE_URL="" as a real (broken) URL.
+for _name in [k for k, v in os.environ.items() if k.startswith("OPENAI_") and not v.strip()]:
+    del os.environ[_name]
 sys.path.insert(0, str(Path(__file__).parent))
 
 import pytest  # noqa: E402

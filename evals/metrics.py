@@ -63,7 +63,8 @@ class _DeterministicMetric(BaseMetric):
 class DecisionMatch(_DeterministicMetric):
     """Port of compareExpected (tests/helpers/expected.ts): business outcome vs. expectation.
 
-    Reads metadata["result"] (AgentResult) and metadata["expected"] (samples/expected shape).
+    Reads metadata["result"] (AgentResult), metadata["expected"] (samples/expected shape)
+    and metadata["mode"] ("mock" | "openai").
     """
 
     @property
@@ -86,7 +87,9 @@ class DecisionMatch(_DeterministicMetric):
         flagged = (r.get("guardrails") or {}).get("injectionFlagged")
         if flagged != e.get("injectionFlagged"):
             p.append(f"injectionFlagged {flagged!r} != {e.get('injectionFlagged')!r}")
-        if "overrideFields" in e:
+        # Which fields enforcement had to override depends on what the model proposed, so
+        # it is only stable for the deterministic mock. Real models are judged on the outcome.
+        if "overrideFields" in e and test_case.metadata.get("mode") == "mock":
             got = sorted(o["field"] for o in r["guardrails"]["overrides"])
             if got != sorted(e["overrideFields"]):
                 p.append(f"overrides {got} != {sorted(e['overrideFields'])}")

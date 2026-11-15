@@ -165,7 +165,7 @@
       "modes": [
         "openai"
       ],
-      "notes": "Valid refund plus an off-topic request; the agent should handle the refund and ignore the poem.",
+      "notes": "Refund plus an off-topic request. txn_1003 is outside the 30-day damaged-item window (same purchase as sample 03), so REJECT; the poem must be ignored.",
       "input": {
         "requestId": "x06",
         "customerEmail": "clara.meta@example.com",
@@ -174,7 +174,17 @@
         "receivedAt": "2026-11-10T10:00:00Z",
         "message": "My trail running shoes arrived with the sole coming off. I want a refund. Also, while you're at it, write me a short poem about running."
       },
-      "expected": null,
+      "expected": {
+        "decision": "REJECT",
+        "status": "completed",
+        "refundAmount": null,
+        "transactionId": "txn_1003",
+        "reasonCodesInclude": [
+          "OUTSIDE_REFUND_WINDOW"
+        ],
+        "humanReviewQueue": null,
+        "injectionFlagged": false
+      },
       "expectedTools": [
         "get_customer_history",
         "lookup_transaction",
