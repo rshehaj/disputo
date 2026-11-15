@@ -30,4 +30,9 @@ describe('loadConfig', () => {
   it('refuses openai mode without a key', () => {
     expect(() => loadConfig({ LLM_MODE: 'openai' })).toThrow(/OPENAI_API_KEY/);
   });
+  it('reads an operator-pinned clock from AGENT_CLOCK', () => {
+    expect(loadConfig({ AGENT_CLOCK: '2026-11-10T10:00:00Z' }).clockOverride).toBe('2026-11-10T10:00:00.000Z');
+    expect(loadConfig({}).clockOverride).toBeNull();
+    expect(() => loadConfig({ AGENT_CLOCK: 'yesterday' })).toThrow(/AGENT_CLOCK/);
+  });
 });

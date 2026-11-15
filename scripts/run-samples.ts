@@ -22,7 +22,12 @@ const rows: string[] = [];
 for (const file of readdirSync('samples/inputs').filter((f) => f.endsWith('.json')).sort()) {
   const input = JSON.parse(readFileSync(join('samples/inputs', file), 'utf8'));
   const expected = JSON.parse(readFileSync(join('samples/expected', file), 'utf8')) as Expected;
-  const result = await runAgent(input, deps);
+  // The harness (not the caller) replays each sample at the time it was recorded.
+  // Each sample is its own scenario: a fresh repo, so an approval in one sample cannot turn the
+  // next sample on the same transaction into REFUND_ALREADY_APPROVED.
+  const at = Date.parse(input.receivedAt);
+  const caseDeps = { ...deps, repo: Repository.fromFixtures('data') };
+  const result = await runAgent(input, Number.isNaN(at) ? caseDeps : { ...caseDeps, now: () => new Date(at) });
 
   // Strip volatile fields so committed outputs are stable across runs.
   const stable = { ...result, trace: { ...result.trace, traceId: '<varies>', durationMs: 0, file: null }, meta: { ...result.meta, decidedAt: '<varies>' } };

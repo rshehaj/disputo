@@ -7,8 +7,12 @@ import type { LlmClient, LlmPurpose, LlmRequest, LlmResponse } from '../../src/l
 import { silentLogger } from '../../src/observability/logger.js';
 import { PolicyIndex } from '../../src/policy/policyDocs.js';
 
-export function makeDeps(llm: LlmClient = new MockLlmClient()): AgentDeps {
+/** The clock the fixtures are written for (data/*.json, samples/inputs). */
+export const FIXTURE_NOW = new Date('2026-11-10T10:00:00Z');
+
+export function makeDeps(llm: LlmClient = new MockLlmClient(), now: Date = FIXTURE_NOW): AgentDeps {
   return {
+    now: () => now,
     llm,
     config: { ...loadConfig({ LLM_MODE: 'mock' }), traceDir: null },
     repo: Repository.fromFixtures('data'),

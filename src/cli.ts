@@ -8,6 +8,9 @@ const USAGE = `Usage: npm run agent -- <request.json | -> [--mock | --openai] [-
   --mock           Force the deterministic mock LLM (no API key needed)
   --openai         Force OpenAI (requires OPENAI_API_KEY)
   --json           Print only the JSON result (for piping)
+  --now=<iso>      Pin the policy clock (operator setting, e.g. --now=2026-11-10T10:00:00Z to
+                   replay the dated fixtures). Same as AGENT_CLOCK. The request's receivedAt
+                   is never used as the clock.
 `;
 
 async function main(argv: string[]): Promise<number> {
@@ -21,6 +24,8 @@ async function main(argv: string[]): Promise<number> {
   const env = { ...process.env };
   if (flags.has('--mock')) env.LLM_MODE = 'mock';
   if (flags.has('--openai')) env.LLM_MODE = 'openai';
+  const nowFlag = argv.find((a) => a.startsWith('--now='));
+  if (nowFlag) env.AGENT_CLOCK = nowFlag.slice('--now='.length);
   const config = loadConfig(env);
 
   const path = args[0]!;

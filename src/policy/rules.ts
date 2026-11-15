@@ -32,6 +32,8 @@ export interface EligibilityInput {
   now: Date;
   autoApproveLimit: number;
   duplicates: Transaction[];
+  /** Earlier decisions on this transaction from OTHER requests (same requestId = a retry, not a new claim). */
+  priorDecisions?: ReadonlyArray<{ decision: string }>;
 }
 
 export const REFUND_WINDOW_DAYS: Record<Category, number> = {
@@ -77,6 +79,19 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityResult 
     refs.add('RP-3');
   } else {
     check('RP-3', true, 'Transaction settled and not refunded');
+  }
+
+  // RP-3: a refund already approved by this agent counts as refunded, even before the payout
+  // system updates the transaction status. An open escalation must be finished by that human first.
+  const prior = input.priorDecisions ?? [];
+  if (prior.some((d) => d.decision === 'AUTO_APPROVE')) {
+    check('RP-3', false, 'A refund for this transaction was already approved by an earlier request');
+    rejects.push('REFUND_ALREADY_APPROVED');
+    refs.add('RP-3');
+  } else if (prior.some((d) => d.decision === 'ESCALATE')) {
+    check('RP-3', false, 'An earlier request for this transaction is waiting for human review');
+    reviews.push('REQUEST_ALREADY_IN_REVIEW');
+    refs.add('RP-3');
   }
 
   // RP-1: window
@@ -168,4 +183,29 @@ export function evaluateEligibility(input: EligibilityInput): EligibilityResult 
     checks,
     daysSincePurchase,
   };
+}
+
+/**
+ * The category comes from the LLM, and it picks the refund window (RP-1). For categories that
+ * no data can confirm, the customer's own words must back the label before a purchase older
+ * than the shortest window can be auto-approved. Duplicate, not-received and unauthorized
+ * claims are checked against transaction / carrier data instead, so they are not listed here.
+ */
+const CATEGORY_EVIDENCE: Partial<Record<Category, RegExp>> = {
+  damaged_item:
+    /\b(damag\w*|broke|broken|crack\w*|shatter\w*|dent\w*|torn|ripped|smashed|defect\w*|faulty|scratch\w*|leak\w*|snapped|falling apart|coming off|stopped working|not working|(?:does|did)n'?t work|won'?t (?:work|turn on|charge)|dead on arrival|thyer\w*|dëmtuar|kaputt|beschädigt|cassé\w*|roto|rotto)\b/i,
+  not_as_described:
+    /\b(not as (?:described|advertised|pictured|shown)|different (?:from|than|to)|wrong (?:item|size|colou?r|model|product|version)|doesn'?t match|does not match|not what i (?:ordered|expected)|counterfeit|fake|misleading)\b/i,
+};
+
+/** Shortest refund window: inside it the category cannot change eligibility, so no evidence is needed. */
+export const MIN_REFUND_WINDOW_DAYS = Math.min(...Object.values(REFUND_WINDOW_DAYS));
+
+export function categoryNeedsEvidence(category: Category, daysSincePurchase: number): boolean {
+  return category in CATEGORY_EVIDENCE && daysSincePurchase > MIN_REFUND_WINDOW_DAYS;
+}
+
+export function messageSupportsCategory(category: Category, message: string): boolean {
+  const re = CATEGORY_EVIDENCE[category];
+  return re ? re.test(message.normalize('NFKC')) : true;
 }

@@ -50,4 +50,19 @@ describe('checkReply', () => {
     });
     expect(checkReply(reply, { ...ctx, decision, refundAmount })).toEqual({ ok: true, violations: [] });
   });
+
+  it('RP-8: an escalation must tell the customer a specialist reviews it within 2 business days', () => {
+    const vague = checkReply({ subject: 'Update', body: 'Thanks for your message, we will look into it soon.' }, { ...ctx, decision: 'ESCALATE' });
+    expect(vague.violations).toContain('escalation_missing_review_notice');
+    const ok = checkReply(
+      { subject: 'Update', body: 'A specialist from our team will review your request within 2 business days.' },
+      { ...ctx, decision: 'ESCALATE' },
+    );
+    expect(ok.violations).not.toContain('escalation_missing_review_notice');
+  });
+
+  it('RP-8: replies must be short', () => {
+    const r = checkReply({ subject: 'Hi', body: 'word '.repeat(200) }, { ...ctx, decision: 'REJECT' });
+    expect(r.violations).toContain('too_long');
+  });
 });

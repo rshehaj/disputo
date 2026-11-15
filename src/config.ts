@@ -17,6 +17,11 @@ export interface AppConfig {
   logLevel: string;
   logPretty: boolean;
   traceDir: string | null;
+  /**
+   * Operator-pinned clock (ISO datetime) for demos and replays against the dated fixtures.
+   * Set by whoever runs the service, never by the caller; unset in production.
+   */
+  clockOverride: string | null;
 }
 
 function num(value: string | undefined, fallback: number, name: string): number {
@@ -24,6 +29,13 @@ function num(value: string | undefined, fallback: number, name: string): number 
   const n = Number(value);
   if (!Number.isFinite(n) || n < 0) throw new Error(`Invalid numeric env var ${name}=${value}`);
   return n;
+}
+
+function isoOrNull(value: string | undefined, name: string): string | null {
+  const v = value?.trim();
+  if (!v) return null;
+  if (Number.isNaN(Date.parse(v))) throw new Error(`Invalid ISO datetime ${name}=${v}`);
+  return new Date(v).toISOString();
 }
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
@@ -54,5 +66,6 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
     logLevel: env.LOG_LEVEL?.trim() || 'info',
     logPretty: env.LOG_PRETTY === '1' || env.LOG_PRETTY === 'true',
     traceDir: env.TRACE_DIR === undefined ? 'traces' : env.TRACE_DIR.trim() || null,
+    clockOverride: isoOrNull(env.AGENT_CLOCK, 'AGENT_CLOCK'),
   };
 }

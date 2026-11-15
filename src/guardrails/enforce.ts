@@ -21,6 +21,11 @@ export interface EnforcementInput {
   knownPolicyRefs: string[];
   /** Transaction id the customer named in the request (null if they gave none). */
   requestedTransactionId: string | null;
+  /**
+   * False when the LLM's category decides the refund window (purchase older than the shortest
+   * window) but the customer's message gives no evidence for it. See policy/rules.ts.
+   */
+  categoryCorroborated: boolean;
 }
 
 export interface EnforcedDecision {
@@ -107,6 +112,12 @@ export function enforceDecision(input: EnforcementInput): EnforcedDecision {
   if (decision === 'REJECT' && engine !== 'reject') {
     // Never reject a customer without a policy basis; let a human decide.
     override('decision', decision, 'ESCALATE', 'ENFORCE:REJECT_WITHOUT_POLICY_BASIS');
+    decision = 'ESCALATE';
+  }
+  if (decision === 'AUTO_APPROVE' && !input.categoryCorroborated) {
+    // The window was only open because of the LLM's category label; a human confirms it.
+    override('decision', decision, 'ESCALATE', 'ENFORCE:CATEGORY_UNVERIFIED');
+    reasons.add('CATEGORY_UNVERIFIED');
     decision = 'ESCALATE';
   }
   if (decision === 'AUTO_APPROVE' && screening.flagged) {

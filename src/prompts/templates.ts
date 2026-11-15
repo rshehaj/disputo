@@ -14,6 +14,7 @@ export interface ReplyContext {
 const CUSTOMER_REASON: Partial<Record<ReasonCode, string>> = {
   OUTSIDE_REFUND_WINDOW: 'the request was received after the refund period for this purchase ended',
   ALREADY_REFUNDED: 'this purchase has already been refunded',
+  REFUND_ALREADY_APPROVED: 'a refund for this purchase has already been approved',
   CHARGEBACK_IN_PROGRESS: 'there is an open dispute with your bank for this payment, which will be resolved through that process',
   SHIPMENT_STILL_IN_TRANSIT: 'your parcel is still on its way',
   TRANSACTION_NOT_FOUND: 'we could not find this purchase on the account linked to your email address',

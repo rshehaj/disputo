@@ -29,6 +29,7 @@ const input = (over: Partial<EnforcementInput> = {}, t: Transaction = txn): Enfo
   screening: clean,
   knownPolicyRefs: ['RP-1', 'RP-2'],
   requestedTransactionId: null,
+  categoryCorroborated: true,
   ...over,
 });
 

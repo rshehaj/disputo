@@ -9,7 +9,7 @@ import { callLlm, callStructured } from '../llm/reliability.js';
 import type { ChatMessage, LlmClient, ToolCall } from '../llm/types.js';
 import type { Tracer } from '../observability/tracer.js';
 import type { PolicyIndex } from '../policy/policyDocs.js';
-import { evaluateEligibility } from '../policy/rules.js';
+import { categoryNeedsEvidence, evaluateEligibility, messageSupportsCategory } from '../policy/rules.js';
 import {
   CLASSIFY_SYSTEM,
   DECIDE_SYSTEM,
@@ -72,6 +72,7 @@ export function buildAgentGraph(deps: GraphDeps) {
     repo,
     policy,
     customer: s.customer,
+    requestId: s.request?.requestId ?? 'unknown',
     category: s.classification?.category ?? 'other',
     requestedAmount: s.request?.requestedAmount,
     now: new Date(s.now),
@@ -100,10 +101,13 @@ export function buildAgentGraph(deps: GraphDeps) {
       };
     }
     const request = parsed.data;
-    tracer.record('guardrail', 'input_validation', { output: { valid: true } });
+    // receivedAt is caller-supplied metadata, kept for the audit trail only. The policy clock
+    // (s.now) is set by the server: a client-chosen date would let anyone reopen a refund window.
+    tracer.record('guardrail', 'input_validation', {
+      output: { valid: true, clientReceivedAt: request.receivedAt ?? null, policyClock: s.now },
+    });
     return {
       request,
-      now: request.receivedAt ?? s.now,
       // Identity comes from the authenticated channel (the e-mail), never from message text.
       customer: repo.findCustomerByEmail(request.customerEmail),
     };
@@ -264,20 +268,27 @@ export function buildAgentGraph(deps: GraphDeps) {
     const customer = s.customer;
     // Re-derive everything from the source of truth instead of trusting tool output relayed by the LLM.
     // The id the customer named wins: the model may not substitute another of their purchases.
-    const candidateId = s.request!.transactionId ?? proposal.transactionId ?? s.findings.transaction?.id ?? null;
+    const req = s.request!;
+    const category = s.classification!.category;
+    const candidateId = req.transactionId ?? proposal.transactionId ?? s.findings.transaction?.id ?? null;
     const verified = customer && candidateId ? repo.getTransactionForCustomer(customer.id, candidateId) : null;
     const eligibility =
       verified && customer
         ? evaluateEligibility({
             transaction: verified,
             customer,
-            category: s.classification!.category,
-            requestedAmount: s.request!.requestedAmount,
+            category,
+            requestedAmount: req.requestedAmount,
             now: new Date(s.now),
             autoApproveLimit: config.autoApproveLimit,
             duplicates: repo.findPossibleDuplicates(verified),
+            priorDecisions: repo.priorDecisionsFor(verified.id, req.requestId),
           })
         : null;
+    const categoryCorroborated =
+      !eligibility ||
+      !categoryNeedsEvidence(category, eligibility.daysSincePurchase) ||
+      messageSupportsCategory(category, s.screening!.sanitized);
 
     const enforced = enforceDecision({
       proposal,
@@ -286,11 +297,28 @@ export function buildAgentGraph(deps: GraphDeps) {
       eligibility,
       screening: s.screening!,
       knownPolicyRefs: policy.ids,
-      requestedTransactionId: s.request!.transactionId ?? null,
+      requestedTransactionId: req.transactionId ?? null,
+      categoryCorroborated,
     });
     tracer.record('guardrail', 'policy_enforcement', {
-      input: { proposed: proposal.decision, proposedAmount: proposal.refundAmount, engine: eligibility?.outcome ?? null },
+      input: {
+        proposed: proposal.decision,
+        proposedAmount: proposal.refundAmount,
+        engine: eligibility?.outcome ?? null,
+        category,
+        categoryCorroborated,
+      },
       output: { decision: enforced.decision, refundAmount: enforced.refundAmount, overrides: enforced.overrides },
+    });
+    // Reserve the decision now, in the same synchronous step as the prior-decision check above.
+    // Node runs this block without yielding, so two concurrent requests for one transaction
+    // cannot both pass the check before either is recorded (single process; see README §9).
+    repo.recordDecision({
+      requestId: req.requestId,
+      decision: enforced.decision,
+      transactionId: enforced.transactionId,
+      refundAmount: enforced.refundAmount,
+      decidedAt: new Date().toISOString(),
     });
     // If enforcement dropped the transaction, the reply must not describe it either.
     return { verifiedTransaction: enforced.transactionId ? verified : null, outcome: { status: 'completed', ...enforced } };
@@ -347,7 +375,11 @@ export function buildAgentGraph(deps: GraphDeps) {
         return fallback(`LLM draft failed: ${(err as Error).message}`);
       }
       const check = checkReply(draft, guardCtx);
-      tracer.record('guardrail', 'reply_check', { output: { attempt, ...check }, status: check.ok ? 'ok' : 'error' });
+      tracer.record('guardrail', 'reply_check', {
+        input: { policyRef: 'RP-8' },
+        output: { attempt, ...check },
+        status: check.ok ? 'ok' : 'error',
+      });
       if (check.ok) return { reply: { draft, source: 'llm' as const } };
       messages.push(
         { role: 'assistant', content: JSON.stringify(draft) },

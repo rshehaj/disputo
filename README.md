@@ -5,7 +5,7 @@ An AI agent that handles customer refund requests from start to finish. It reads
 Built with **TypeScript · LangGraph.js · OpenAI (function calling) · Zod · pino · Vitest**. Runs fully offline with a deterministic mock LLM, so everything in this README can be checked without an API key.
 
 ```bash
-npm install && npm run check                 # typecheck + 96 tests + 12 sample scenarios
+npm install && npm run check                 # typecheck + 129 tests + 12 sample scenarios
 # or, with only Docker installed:
 docker compose run --rm api npm run check
 ```
@@ -100,13 +100,13 @@ flowchart LR
 | Entry points | `cli.ts`, `server.ts` | CLI and a minimal HTTP API |
 
 **Data flow for one request**
-1. **validate_input**: Zod checks types, formats and lengths. The customer is resolved from the *authenticated email*, never from the message text.
+1. **validate_input**: Zod checks types, formats and lengths. The customer is resolved from the *authenticated email*, never from the message text. The policy clock is the **server's**: a caller's `receivedAt` is recorded in the trace but never decides a refund window (otherwise anyone could backdate a request and reopen an expired window).
 2. **screen_input**: regex signals (instruction override, role hijack, fake `system:` tags, delimiter escape, hidden zero-width characters…) produce a score. The text is also sanitized.
 3. **classify**: the LLM returns `{inScope, category, confidence, summary}`, validated by Zod. Out-of-scope requests stop here.
 4. **investigate**: the orchestrator first loads `get_customer_history` itself (models were seen skipping it). The LLM then plans and calls tools one step at a time: `lookup_transaction` or `list_customer_transactions` → `search_refund_policy` → `check_refund_eligibility`. Tool results (not LLM summaries) are collected as findings. The loop has an iteration cap and blocks duplicate calls.
 5. **decide**: the LLM proposes a decision as JSON, with a repair loop on invalid output.
-6. **enforce_policy**: re-fetches the transaction (checking ownership, and that it is the transaction the customer named, so the model cannot quietly switch to another purchase), **recomputes eligibility itself**, and applies the rules: the LLM may only tighten the outcome; amounts are capped at the policy maximum; anything flagged for injection is never auto-approved; a rejection with no policy basis goes to a human. Every change is recorded as an `override`.
-7. **draft_reply**: the LLM writes the reply for the *final* decision. The reply guard blocks promising unapproved refunds, refusals that talk about a refund, leaking internal rules or risk signals, other people's emails, and links. After two failed attempts it uses a deterministic template.
+6. **enforce_policy**: re-fetches the transaction (checking ownership, and that it is the transaction the customer named, so the model cannot quietly switch to another purchase), **recomputes eligibility itself**, and applies the rules: the LLM may only tighten the outcome; amounts are capped at the policy maximum; anything flagged for injection is never auto-approved; a rejection with no policy basis goes to a human. Two checks cover inputs the LLM controls or the caller repeats: the LLM's **category** picks the refund window (14 days for change of mind, 30 for damage), so a purchase older than the shortest window is auto-approved only if the message itself supports the category (`CATEGORY_UNVERIFIED` otherwise); and an **earlier decision on the same transaction** from another request counts (approved → `REFUND_ALREADY_APPROVED`, still escalated → `REQUEST_ALREADY_IN_REVIEW`). The decision is reserved in the same synchronous step as that check, so two concurrent requests can't both pass it. Every change is recorded as an `override`.
+7. **draft_reply**: the LLM writes the reply for the *final* decision. The reply guard blocks promising unapproved refunds, refusals that talk about a refund, leaking internal rules or risk signals, other people's emails, links, overlong replies, and escalations that don't tell the customer a specialist will review within 2 business days. Each check maps to a clause of RP-8 (customer communication). After two failed attempts it uses a deterministic template.
 8. **finalize**: assembles the result, validates it with `AgentResultSchema`, writes the trace and the decision log.
 
 ### Why LangGraph.js
@@ -125,6 +125,8 @@ Requirements: Docker with Compose v2.24 or later.
 git clone <this-repo> disputo && cd disputo
 docker compose up --build api                # HTTP API on :3000 (mock LLM unless .env has OPENAI_API_KEY)
 curl -s localhost:3000/healthz
+# The fixtures are dated around 10 Nov 2026. To replay the samples exactly, pin the server clock:
+# AGENT_CLOCK=2026-11-10T10:00:00Z docker compose up --build api   (or put it in .env)
 curl -s localhost:3000/v1/refund-requests -H 'content-type: application/json' \
      -d @samples/inputs/05-prompt-injection-escalate.json
 
@@ -148,8 +150,10 @@ cp .env.example .env        # optional
 
 **Run without an API key (mock LLM, deterministic):**
 ```bash
-npm run agent -- samples/inputs/01-damaged-item-auto-approve.json --mock
+npm run agent -- samples/inputs/01-damaged-item-auto-approve.json --mock --now=2026-11-10T10:00:00Z
 ```
+
+`--now` (or `AGENT_CLOCK` in `.env`) pins the policy clock to the date the fixtures were written for. It is an operator setting; without it the wall clock is used, and a request's `receivedAt` is never used. `npm run samples`, the tests and the eval export pin it themselves.
 
 **Run with OpenAI:**
 ```bash
@@ -169,7 +173,7 @@ curl -s localhost:3000/v1/refund-requests -H 'content-type: application/json' \
      -d @samples/inputs/07-duplicate-charge-auto-approve.json
 ```
 
-Configuration (`.env.example`): `LLM_MODE`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_TEMPERATURE` (`none` for models that don't accept it), `OPENAI_BASE_URL`, `AUTO_APPROVE_LIMIT_EUR` (default 200), `MAX_TOOL_ITERATIONS` (default 8), `LOG_LEVEL`, `LOG_PRETTY`, `TRACE_DIR`.
+Configuration (`.env.example`): `LLM_MODE`, `OPENAI_API_KEY`, `OPENAI_MODEL`, `OPENAI_TEMPERATURE` (`none` for models that don't accept it), `OPENAI_BASE_URL`, `AUTO_APPROVE_LIMIT_EUR` (default 200), `MAX_TOOL_ITERATIONS` (default 8), `AGENT_CLOCK` (operator-pinned clock, empty in production), `LOG_LEVEL`, `LOG_PRETTY`, `TRACE_DIR`.
 
 ## 6. Output contract
 
@@ -212,7 +216,7 @@ Every run returns one JSON object validated by `AgentResultSchema` (`src/types.t
 ```bash
 npm run check        # everything below in one go
 npm run typecheck    # tsc --strict, noUncheckedIndexedAccess
-npm test             # all 96 tests
+npm test             # all 129 tests
 npm run test:unit    # unit tests only
 npm run test:e2e     # end-to-end / integration only
 npm run samples      # runs samples/inputs, writes samples/outputs, compares with samples/expected
@@ -231,17 +235,20 @@ npm run samples      # runs samples/inputs, writes samples/outputs, compares wit
 **Integration / e2e tests** (`tests/e2e`)
 - `samples.test.ts`: all 12 sample requests through the **full graph**, compared with `samples/expected/*.json`, plus determinism and trace checks.
 - `resilience.test.ts`: a scripted, misbehaving LLM: invalid JSON (recovers), LLM down (fail-safe escalate with template reply), refunding another customer's transaction (blocked), over-approval (downgraded), a reply promising an unapproved refund (replaced), a runaway tool loop (stopped at the cap), bad tool arguments (the model recovers).
+- `hardening.test.ts`: attacks that bypass the LLM: a backdated or future `receivedAt` (ignored), a second claim on an already-approved transaction (rejected; also after a restart, because the decision log is reloaded), a retry with the same `requestId` (same answer, no second refund), a clean resubmission while an injected one is in review (stays in review), and a change-of-mind message labelled as damage after day 14 (escalated).
 - `http.test.ts`: HTTP API: 200 / 422 / 400 / 415 and the health check.
 
 **Manual scenarios**
+Add `--now=2026-11-10T10:00:00Z` to each command below so the dated fixtures behave as in the samples.
+
 1. `npm run agent -- samples/inputs/05-prompt-injection-escalate.json --mock`: watch the `Guardrails:` line show both overrides.
 2. Edit `samples/inputs/01-…json` and set `"requestedAmount": 500` → `ESCALATE` with `AMOUNT_EXCEEDS_TRANSACTION`, amount capped at 45.
 3. Set `AUTO_APPROVE_LIMIT_EUR=1000` and re-run sample 02 → it becomes `AUTO_APPROVE` 849.
-4. Write your own message, e.g. `{"requestId":"me_1","customerEmail":"dritan.leka@example.com","message":"I never received my headphones, refund please","receivedAt":"2026-11-20T10:00:00Z"}`. The estimated delivery date has passed and the parcel still isn't delivered, so the agent finds `txn_1008` without an id and auto-approves 120.00.
+4. Write your own message, e.g. `{"requestId":"me_1","customerEmail":"dritan.leka@example.com","message":"I never received my headphones, refund please"}` and run it with `--now=2026-11-20T10:00:00Z`. The estimated delivery date has passed and the parcel still isn't delivered, so the agent finds `txn_1008` without an id and auto-approves 120.00.
 5. With a real key: `npm run samples -- --openai` runs the same 12 scenarios against OpenAI. Decisions should match, because the policy engine decides; wording varies.
 6. Open `traces/*.json` to see every node, LLM call, tool call (arguments and results) and guardrail decision.
 
-Sample data: customers in `data/customers.json`, transactions in `data/transactions.json`. Samples use a fixed `receivedAt` (2026-11-10) so date rules are reproducible.
+Sample data: customers in `data/customers.json`, transactions in `data/transactions.json`. Samples carry `receivedAt` 2026-11-10; the sample runner, tests and eval export replay each one at that time through the injected clock, so date rules are reproducible.
 
 ### Evaluation with DeepEval
 
@@ -284,6 +291,9 @@ Offline result (mock LLM): 17 runs, 38 passed, 21 judge tests skipped. The eval 
 |-------|--------------|
 | Input validation | Strict Zod schema: id formats, email, length limits, currency allow-list. Invalid input never reaches the LLM. |
 | Identity | Customer resolved from the authenticated email, never from message text. |
+| Server-owned clock | Refund windows use the server's clock (or an operator's `AGENT_CLOCK`), never the caller's `receivedAt`. |
+| One refund per transaction | Earlier approvals and open escalations on a transaction block a new auto-approval; the decision is reserved during enforcement and the log is reloaded on start. A repeated `requestId` is a retry, not a new claim. |
+| Category check | The LLM's category can't open a longer refund window on its own: past the shortest window, the message must support it. |
 | Injection screening | 11 weighted signals plus hidden-character detection. A flagged request can be processed but **can never be auto-approved**, and goes to `trust-safety`. |
 | Prompt hygiene | Static, versioned system prompts. User text only inside `<customer_message>` tags, explicitly marked as untrusted. Delimiter tags are stripped from user text, so it can't close the tag. |
 | Least-privilege tools | Tools get the customer from the orchestrator, not from the LLM. A foreign transaction returns the same `not_found` as a non-existent one (no enumeration). Arguments are schema-validated; unknown tools are rejected. |
@@ -304,7 +314,9 @@ Offline result (mock LLM): 17 runs, 38 passed, 21 judge tests skipped. The eval 
 
 **Limitations**
 - Single currency (EUR), single turn, no attachments.
-- Fixture data instead of a database or payment-provider API. No idempotency key or locking (two concurrent requests for one transaction could both be escalated).
+- Fixture data instead of a database or payment-provider API. The one-refund-per-transaction guard holds within one process (decisions are reserved synchronously and the JSONL log is reloaded on start); several instances would need a database unique constraint on the transaction. A payout system must use `requestId` as its idempotency key.
+- The category check is keyword-based: it stops the LLM from relabelling a request, not a customer who simply claims damage (a human agent can't tell either without a photo).
+- Injection patterns cover English plus a few common phrasings in German, French, Spanish, Italian, Portuguese and Albanian; other languages rely on the later layers.
 - Evaluated only on a small synthetic DeepEval set (`evals/`), not yet on a real dataset of tickets.
 - English-first prompts (they ask the model to answer in the customer's language, but that isn't tested).
 

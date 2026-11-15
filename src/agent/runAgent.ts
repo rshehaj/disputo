@@ -15,7 +15,10 @@ export interface AgentDeps {
   policy: PolicyIndex;
   config: AppConfig;
   logger: Logger;
-  /** Clock used when the request has no receivedAt (injectable for tests). */
+  /**
+   * Policy clock (injectable for tests and replays). The caller's `receivedAt` is never used:
+   * refund windows would otherwise be controlled by whoever sends the request.
+   */
   now?: () => Date;
 }
 
@@ -54,13 +57,15 @@ export async function runAgent(rawInput: unknown, deps: AgentDeps): Promise<Agen
   const graph = buildAgentGraph({ llm: deps.llm, repo: deps.repo, policy: deps.policy, config: deps.config, tracer });
 
   const state = await graph.invoke(
-    { rawInput, now: (deps.now?.() ?? new Date()).toISOString() },
+    { rawInput, now: policyClock(deps).toISOString() },
     { recursionLimit: 30 },
   );
   const result = state.result;
   if (!result) throw new Error('Agent finished without a result (graph wiring bug)');
 
-  if (result.status !== 'invalid_input') {
+  // Completed decisions about a transaction are reserved inside enforce_policy (see graph.ts).
+  // Everything else is logged here for the audit trail.
+  if (result.status !== 'invalid_input' && result.status !== 'completed') {
     deps.repo.recordDecision({
       requestId: result.requestId,
       decision: result.decision,
@@ -73,4 +78,10 @@ export async function runAgent(rawInput: unknown, deps: AgentDeps): Promise<Agen
     result.trace.file = tracer.writeTo(deps.config.traceDir);
   }
   return result;
+}
+
+/** Server-side clock: injected `now`, else the operator's AGENT_CLOCK, else wall time. */
+export function policyClock(deps: Pick<AgentDeps, 'now' | 'config'>): Date {
+  if (deps.now) return deps.now();
+  return deps.config.clockOverride ? new Date(deps.config.clockOverride) : new Date();
 }

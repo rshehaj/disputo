@@ -74,6 +74,9 @@ export const REASON_CODES = [
   'OUT_OF_SCOPE',
   'INVALID_INPUT',
   'AGENT_ERROR',
+  'REFUND_ALREADY_APPROVED',
+  'REQUEST_ALREADY_IN_REVIEW',
+  'CATEGORY_UNVERIFIED',
 ] as const;
 export const ReasonCodeSchema = z.enum(REASON_CODES);
 export type ReasonCode = z.infer<typeof ReasonCodeSchema>;

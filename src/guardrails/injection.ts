@@ -39,6 +39,19 @@ const PATTERNS: Pattern[] = [
     re: /\b(i am|i'm) (?:an?|the|your) (admin|administrator|manager|developer|supervisor|ceo)\b|\bauthori[sz]ed by (?:the )?(management|admin|ceo)\b/i,
     weight: 2,
   },
+  {
+    // Social engineering: a claimed approval by staff is something only a human can verify.
+    id: 'claimed_approval',
+    re: /\b(?:colleague|manager|supervisor|agent|admin|staff|someone from (?:your|the) (?:team|support)|customer (?:service|care|support))\b[^.\n]{0,60}\b(?:approved|authori[sz]ed|agreed to|promised|signed off on|confirmed)\b[^.\n]{0,30}\b(?:refund|money back|reimburse\w*|full amount)\b|\b(?:already|pre-?)\s?(?:approved|authori[sz]ed)\b[^.\n]{0,30}\b(?:refund|it|this)\b/i,
+    weight: 3,
+  },
+  {
+    // The English pattern above misses the same attack in other languages. A short list of the
+    // most common phrasings; an LLM-based classifier is the real fix (README §9).
+    id: 'ignore_instructions_multilingual',
+    re: /\b(?:ignorier\w*|vergiss)\b[^.\n]{0,40}\b(?:anweisungen|regeln|richtlinien)\b|\b(?:ignore[rz]?|oublie[rz]?)\b[^.\n]{0,40}\bles\s+(?:instructions|règles|consignes)\b|\b(?:ignora|olvida|ignore)\b[^.\n]{0,40}\b(?:instrucciones|reglas|istruzioni|regole|instruções|regras)\b|\b(?:injoro|harro)\b[^.\n]{0,40}\b(?:udhëzimet|udhezimet|rregullat|instruksionet)\b/i,
+    weight: 3,
+  },
   { id: 'tool_manipulation', re: /\b(call|invoke|run|execute|use)\b[^.\n]{0,30}\b(tool|function|api)\b/i, weight: 2 },
   { id: 'no_escalation_demand', re: /\b(do not|don't|never)\s+(escalate|involve a human|send (?:it )?to review)\b/i, weight: 2 },
   { id: 'encoded_payload', re: /[A-Za-z0-9+/]{120,}={0,2}/, weight: 2 },

@@ -27,7 +27,24 @@ const INTERNAL_LEAKS: Array<[string, RegExp]> = [
 const EMAIL = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi;
 const URL = /\bhttps?:\/\/\S+/i;
 
-/** Deterministic checks on the customer-facing reply before it can be sent. */
+/** RP-8: "Escalated cases: tell the customer a specialist will review the request within 2 business days." */
+const ESCALATION_TIMELINE = /\b(?:2|two) business days\b/i;
+const ESCALATION_REVIEWER = /\b(specialist|member of our team|our team will review|colleague will review)\b/i;
+
+/** RP-8: "short". The prompt asks for at most 120 words; the guard allows some slack. */
+export const MAX_REPLY_WORDS = 160;
+
+/**
+ * Deterministic checks on the customer-facing reply before it can be sent.
+ * This is how RP-8 (customer communication) is enforced; every clause maps to a check:
+ *  - "polite, short and specific"            → too_long, missing_refund_amount
+ *  - "never promise an undecided outcome"    → promises_refund_not_approved, refusal_mentions_refund
+ *  - "never reveal internal rules / risk"    → leaks_*
+ *  - "never reveal other customers' data"    → foreign_email_address
+ *  - "escalated: specialist within 2 days"   → escalation_missing_review_notice
+ *  - (no links, to keep phishing-shaped replies out) → contains_url
+ * Politeness itself is judged by the G-Eval tone metric in evals/, not here.
+ */
 export function checkReply(reply: ReplyDraft, ctx: ReplyGuardContext): ReplyGuardResult {
   const violations: string[] = [];
   const text = `${reply.subject}\n${reply.body}`;
@@ -42,6 +59,10 @@ export function checkReply(reply: ReplyDraft, ctx: ReplyGuardContext): ReplyGuar
     const amount = ctx.refundAmount.toFixed(2);
     if (!text.includes(amount)) violations.push('missing_refund_amount');
   }
+  if (ctx.decision === 'ESCALATE' && !(ESCALATION_TIMELINE.test(text) && ESCALATION_REVIEWER.test(text))) {
+    violations.push('escalation_missing_review_notice');
+  }
+  if (reply.body.trim().split(/\s+/).length > MAX_REPLY_WORDS) violations.push('too_long');
   for (const [id, re] of INTERNAL_LEAKS) if (re.test(text)) violations.push(`leaks_${id}`);
 
   const emails = text.match(EMAIL) ?? [];

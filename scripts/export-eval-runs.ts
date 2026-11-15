@@ -58,7 +58,11 @@ for (const c of cases) {
   if (!input) throw new Error(`Case ${c.id} has neither input nor inputPath`);
   const expected = c.expected ?? (c.expectedPath ? readJson<Record<string, unknown>>(c.expectedPath) : null);
 
-  const result = await runAgent(input, deps);
+  // Trusted harness: replay each case at its recorded time. The agent itself ignores receivedAt.
+  // Fresh repo per case: cases are independent scenarios and some share a transaction.
+  const at = Date.parse(String(input.receivedAt));
+  const caseDeps = { ...deps, repo: Repository.fromFixtures('data') };
+  const result = await runAgent(input, Number.isNaN(at) ? caseDeps : { ...caseDeps, now: () => new Date(at) });
   const events =
     result.trace.file && existsSync(result.trace.file) ? readJson<{ events: TraceEvent[] }>(result.trace.file).events : [];
   const toolsCalled = events

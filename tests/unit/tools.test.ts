@@ -9,6 +9,7 @@ const ctxFor = (email: string): ToolContext => ({
   repo,
   policy,
   customer: repo.findCustomerByEmail(email),
+  requestId: 'req_tools',
   category: 'damaged_item',
   requestedAmount: undefined,
   now: new Date('2026-11-10T10:00:00Z'),

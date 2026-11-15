@@ -13,6 +13,8 @@ export interface ToolContext {
   repo: Repository;
   policy: PolicyIndex;
   customer: Customer | null;
+  /** Current request id: earlier decisions from other requests count as prior refunds. */
+  requestId: string;
   category: Category;
   requestedAmount: number | undefined;
   now: Date;
@@ -159,6 +161,7 @@ export const TOOLS = [
           now: ctx.now,
           autoApproveLimit: ctx.autoApproveLimit,
           duplicates: ctx.repo.findPossibleDuplicates(t),
+          priorDecisions: ctx.repo.priorDecisionsFor(t.id, ctx.requestId),
         }),
       };
     },

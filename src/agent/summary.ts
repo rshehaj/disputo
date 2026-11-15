@@ -24,6 +24,9 @@ const REASON_TEXT: Record<ReasonCode, string> = {
   OUT_OF_SCOPE: 'request is not about refunds/billing',
   INVALID_INPUT: 'input failed validation',
   AGENT_ERROR: 'agent failed; failing safe to human review',
+  REFUND_ALREADY_APPROVED: 'a refund for this transaction was already approved by an earlier request',
+  REQUEST_ALREADY_IN_REVIEW: 'an earlier request for this transaction is waiting for human review',
+  CATEGORY_UNVERIFIED: 'the category decides the refund window but the message does not support it',
 };
 
 const NEXT_STEP: Record<AgentResult['decision'], string> = {

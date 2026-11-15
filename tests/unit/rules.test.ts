@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import type { Customer, Transaction } from '../../src/data/repository.js';
-import { evaluateEligibility, type EligibilityInput } from '../../src/policy/rules.js';
+import {
+  categoryNeedsEvidence,
+  evaluateEligibility,
+  messageSupportsCategory,
+  type EligibilityInput,
+} from '../../src/policy/rules.js';
 
 const customer: Customer = {
   id: 'cus_x',
@@ -94,5 +99,46 @@ describe('evaluateEligibility', () => {
 
   it('always sends unauthorized charges to review', () => {
     expect(evaluateEligibility(base({ category: 'unauthorized_charge' })).outcome).toBe('review');
+  });
+
+  it('treats a refund approved by an earlier request as already refunded (RP-3)', () => {
+    const r = evaluateEligibility(base({ priorDecisions: [{ decision: 'AUTO_APPROVE' }] }));
+    expect(r.outcome).toBe('reject');
+    expect(r.reasons).toContain('REFUND_ALREADY_APPROVED');
+  });
+
+  it('sends a new request to review while an earlier one is escalated (RP-3)', () => {
+    const r = evaluateEligibility(base({ priorDecisions: [{ decision: 'ESCALATE' }] }));
+    expect(r.outcome).toBe('review');
+    expect(r.reasons).toContain('REQUEST_ALREADY_IN_REVIEW');
+  });
+
+  it('ignores earlier decisions that moved no money', () => {
+    const r = evaluateEligibility(base({ priorDecisions: [{ decision: 'REJECT' }, { decision: 'NEED_MORE_INFO' }] }));
+    expect(r.outcome).toBe('auto_approve');
+  });
+});
+
+describe('category evidence', () => {
+  it('is only needed for unverifiable categories past the shortest window', () => {
+    expect(categoryNeedsEvidence('damaged_item', 14)).toBe(false);
+    expect(categoryNeedsEvidence('damaged_item', 15)).toBe(true);
+    expect(categoryNeedsEvidence('not_as_described', 20)).toBe(true);
+    // Checked against data instead (duplicates, carrier status, fraud review).
+    expect(categoryNeedsEvidence('duplicate_charge', 40)).toBe(false);
+    expect(categoryNeedsEvidence('not_received', 40)).toBe(false);
+  });
+
+  it.each([
+    ['damaged_item', 'two of the mugs are cracked'],
+    ['damaged_item', 'the backrest snapped off'],
+    ['damaged_item', 'dy filxhanë janë të thyer'],
+    ['not_as_described', 'it is a completely different colour than the photo, wrong size too'],
+  ] as const)('accepts %s evidence: %s', (category, message) => {
+    expect(messageSupportsCategory(category, message)).toBe(true);
+  });
+
+  it('rejects a damage label on a change-of-mind message', () => {
+    expect(messageSupportsCategory('damaged_item', 'I just do not like it anymore, please take it back')).toBe(false);
   });
 });

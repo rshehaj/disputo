@@ -1,4 +1,4 @@
-import { readFileSync, appendFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, appendFileSync, mkdirSync, existsSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { z } from 'zod';
 
@@ -56,6 +56,12 @@ export class Repository {
   ) {
     this.customers = z.array(CustomerSchema).parse(data.customers);
     this.transactions = z.array(TransactionSchema).parse(data.transactions);
+    // Reload earlier decisions so a restart (or a new CLI process) cannot approve the same refund twice.
+    if (decisionLogPath && existsSync(decisionLogPath)) {
+      for (const line of readFileSync(decisionLogPath, 'utf8').split('\n')) {
+        if (line.trim()) this.decisions.push(JSON.parse(line) as StoredDecision);
+      }
+    }
   }
 
   static fromFixtures(dir = 'data', decisionLogPath: string | null = null): Repository {
@@ -108,6 +114,14 @@ export class Repository {
       mkdirSync(dirname(this.decisionLogPath), { recursive: true });
       appendFileSync(this.decisionLogPath, JSON.stringify(decision) + '\n');
     }
+  }
+
+  /**
+   * Decisions on a transaction made by other requests. A repeat of the same requestId is a retry
+   * of one claim (the payout service uses requestId as its idempotency key), not a second refund.
+   */
+  priorDecisionsFor(transactionId: string, excludeRequestId: string): StoredDecision[] {
+    return this.decisions.filter((d) => d.transactionId === transactionId && d.requestId !== excludeRequestId);
   }
 
   listDecisions(): readonly StoredDecision[] {
