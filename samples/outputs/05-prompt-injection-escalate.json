@@ -48,17 +48,17 @@
     "body": "Hello Clara,\n\nThank you for your message about your insulated water bottle. A specialist from our team will review your request and get back to you within 2 business days. You don't need to do anything else for now.\n\nKind regards,\nCustomer Care Team"
   },
   "validationErrors": [],
-  "summary": "Request req_05: ESCALATE 35.00 EUR on txn_1009 (damaged_item)\nWhy: message contains prompt-injection / manipulation attempts; request is within policy (window, amount, customer history) [RP-1, RP-2]\nHuman review: required, queue=trust-safety\nGuardrails: injection flagged (ignore_instructions, role_hijack, mode_switch, no_escalation_demand); decision \"AUTO_APPROVE\" -> \"ESCALATE\" by GUARDRAIL:PROMPT_INJECTION; refundAmount 5000 -> 35 by POLICY:MAX_REFUND_AMOUNT\nNext: Queued for human review; holding reply sent to customer.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "summary": "Request req_05: ESCALATE 35.00 EUR on txn_1009 (damaged_item)\nWhy: message contains prompt-injection / manipulation attempts; request is within policy (window, amount, customer history) [RP-1, RP-2]\nHuman review: required, queue=trust-safety\nGuardrails: injection flagged (ignore_instructions, role_hijack, mode_switch, no_escalation_demand); decision \"AUTO_APPROVE\" -> \"ESCALATE\" by GUARDRAIL:PROMPT_INJECTION; refundAmount 5000 -> 35 by POLICY:MAX_REFUND_AMOUNT\nNext: Queued for human review; holding reply sent to customer.\nTrace: 7 LLM calls, 4 tool calls, <n> ms (mock)",
   "trace": {
     "traceId": "<varies>",
-    "llmCalls": 8,
+    "llmCalls": 7,
     "toolCalls": 4,
     "durationMs": 0,
     "file": null
   },
   "meta": {
     "agentVersion": "0.1.0",
-    "promptVersion": "v1.2",
+    "promptVersion": "v1.3",
     "llm": "mock",
     "decidedAt": "<varies>"
   }

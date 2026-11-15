@@ -26,6 +26,22 @@ describe('checkReply', () => {
     );
   });
 
+  it('blocks a refusal that talks about a refund the customer never asked for', () => {
+    const r = checkReply(
+      { subject: 'Re: your message', body: 'Unfortunately, we are unable to process your refund request as it falls outside our policy scope.' },
+      { ...ctx, decision: 'REFUSED' },
+    );
+    expect(r.violations).toContain('refusal_mentions_refund');
+  });
+
+  it('allows a refusal that explains what the inbox handles', () => {
+    const r = checkReply(
+      { subject: 'How we can help', body: 'This inbox handles refunds, returns and billing questions, so we cannot help with this request.' },
+      { ...ctx, decision: 'REFUSED' },
+    );
+    expect(r).toEqual({ ok: true, violations: [] });
+  });
+
   it.each(DECISIONS)('the fallback template for %s always passes the guard', (decision) => {
     const refundAmount = decision === 'AUTO_APPROVE' ? 19.99 : null;
     const reply = renderTemplateReply({

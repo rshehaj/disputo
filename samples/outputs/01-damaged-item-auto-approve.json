@@ -29,17 +29,17 @@
     "body": "Hello Ana,\n\nThank you for letting us know. We have approved a refund of 45.00 EUR for your ceramic mug set (4 pcs). It will be returned to your original payment method within 5-7 business days.\n\nKind regards,\nCustomer Care Team"
   },
   "validationErrors": [],
-  "summary": "Request req_01: AUTO_APPROVE 45.00 EUR on txn_1001 (damaged_item)\nWhy: request is within policy (window, amount, customer history) [RP-1, RP-2]\nGuardrails: none triggered\nNext: Refund can be issued automatically; customer reply is ready to send.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "summary": "Request req_01: AUTO_APPROVE 45.00 EUR on txn_1001 (damaged_item)\nWhy: request is within policy (window, amount, customer history) [RP-1, RP-2]\nGuardrails: none triggered\nNext: Refund can be issued automatically; customer reply is ready to send.\nTrace: 7 LLM calls, 4 tool calls, <n> ms (mock)",
   "trace": {
     "traceId": "<varies>",
-    "llmCalls": 8,
+    "llmCalls": 7,
     "toolCalls": 4,
     "durationMs": 0,
     "file": null
   },
   "meta": {
     "agentVersion": "0.1.0",
-    "promptVersion": "v1.2",
+    "promptVersion": "v1.3",
     "llm": "mock",
     "decidedAt": "<varies>"
   }

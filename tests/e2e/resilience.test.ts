@@ -46,6 +46,59 @@ describe('agent resilience against bad or hostile model output', () => {
     expect(r.guardrails.overrides.map((o) => o.field)).toEqual(['decision', 'transactionId', 'refundAmount']);
   });
 
+  it('does not refund a different purchase than the one the customer named', async () => {
+    // Seen with gpt-4o-mini: the named txn_1001 is not Dritan's, so the model picked his own
+    // headphones (txn_1008) and approved them as a "damaged item".
+    const llm = new ScriptedLlm({
+      decide: () =>
+        jsonResponse({
+          decision: 'AUTO_APPROVE', transactionId: 'txn_1008', refundAmount: 120,
+          reasonCodes: ['WITHIN_POLICY'], policyRefs: ['RP-1'], rationale: 'damaged item', confidence: 0.9,
+        }),
+    });
+    const r = await runAgent(sample('08-foreign-transaction-need-info'), makeDeps(llm));
+    expect(r).toMatchObject({ decision: 'NEED_MORE_INFO', transactionId: null, refundAmount: null });
+    expect(r.reasonCodes).toContain('TRANSACTION_NOT_FOUND');
+    expect(r.guardrails.overrides.map((o) => o.rule)).toContain('ENFORCE:REQUESTED_TRANSACTION_MISMATCH');
+  });
+
+  it('loads the customer history even when the model skips that step', async () => {
+    const skipHistory = [
+      { name: 'lookup_transaction', arguments: '{"transactionId":"txn_1001"}' },
+      { name: 'search_refund_policy', arguments: '{"query":"damaged item"}' },
+      { name: 'check_refund_eligibility', arguments: '{"transactionId":"txn_1001"}' },
+    ];
+    let customerSeenByDecide: unknown = null;
+    const llm = new ScriptedLlm({
+      investigate: (_req, n) => {
+        const step = skipHistory[n];
+        return step
+          ? { content: null, toolCalls: [{ id: `s${n}`, ...step }] }
+          : { content: 'INVESTIGATION COMPLETE transactionId=txn_1001 note=ok', toolCalls: [] };
+      },
+      decide: (req, _n, base) => {
+        const findings = req.messages.find((m) => m.role === 'user')?.content ?? '';
+        customerSeenByDecide = (JSON.parse(/<findings>\n([\s\S]*?)\n<\/findings>/.exec(findings)![1]!) as { customer: unknown }).customer;
+        return base.complete(req);
+      },
+    });
+    const r = await runAgent(sample('01-damaged-item-auto-approve'), makeDeps(llm));
+    expect(customerSeenByDecide).toMatchObject({ found: true, customerId: 'cus_001' });
+    expect(r.trace.toolCalls).toBe(4); // history (by the orchestrator) + the model's 3 calls
+    expect(r.decision).toBe('AUTO_APPROVE');
+  });
+
+  it('replaces a refusal reply that talks about a refund with the safe template', async () => {
+    const llm = new ScriptedLlm({
+      draft_reply: () =>
+        jsonResponse({ subject: 'Re: your request', body: 'Dear Ana, unfortunately we are unable to process your refund request. Customer Care Team' }),
+    });
+    const r = await runAgent(sample('09-out-of-scope-refused'), makeDeps(llm));
+    expect(r.decision).toBe('REFUSED');
+    expect(r.guardrails.replySource).toBe('template');
+    expect(r.customerReply?.body).toContain('refunds, returns and billing questions');
+  });
+
   it('cannot be talked into approving above the auto-approve limit', async () => {
     const llm = new ScriptedLlm({
       decide: () =>
@@ -96,6 +149,7 @@ describe('agent resilience against bad or hostile model output', () => {
     const r = await runAgent(sample('01-damaged-item-auto-approve'), makeDeps(llm));
     expect(r.status).toBe('completed');
     expect(r.decision).toBe('AUTO_APPROVE');
-    expect(llm.calls.investigate).toBe(6); // bad call + 4 good calls + completion
+    // bad call + 3 good calls + completion (customer history is fetched by the orchestrator)
+    expect(llm.calls.investigate).toBe(5);
   });
 });

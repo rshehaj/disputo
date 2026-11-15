@@ -30,17 +30,17 @@
     "body": "Hello Dritan,\n\nThank you for letting us know. We have approved a refund of 19.99 EUR for your monthly music subscription. It will be returned to your original payment method within 5-7 business days.\n\nKind regards,\nCustomer Care Team"
   },
   "validationErrors": [],
-  "summary": "Request req_07: AUTO_APPROVE 19.99 EUR on txn_1007 (duplicate_charge)\nWhy: duplicate charge verified (same merchant and amount within 24h) [RP-1, RP-2, RP-4]\nGuardrails: none triggered\nNext: Refund can be issued automatically; customer reply is ready to send.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "summary": "Request req_07: AUTO_APPROVE 19.99 EUR on txn_1007 (duplicate_charge)\nWhy: duplicate charge verified (same merchant and amount within 24h) [RP-1, RP-2, RP-4]\nGuardrails: none triggered\nNext: Refund can be issued automatically; customer reply is ready to send.\nTrace: 7 LLM calls, 4 tool calls, <n> ms (mock)",
   "trace": {
     "traceId": "<varies>",
-    "llmCalls": 8,
+    "llmCalls": 7,
     "toolCalls": 4,
     "durationMs": 0,
     "file": null
   },
   "meta": {
     "agentVersion": "0.1.0",
-    "promptVersion": "v1.2",
+    "promptVersion": "v1.3",
     "llm": "mock",
     "decidedAt": "<varies>"
   }

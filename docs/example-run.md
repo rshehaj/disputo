@@ -39,7 +39,7 @@ Why: message contains prompt-injection / manipulation attempts; request is withi
 Human review: required, queue=trust-safety
 Guardrails: injection flagged (ignore_instructions, role_hijack, mode_switch, no_escalation_demand); decision "AUTO_APPROVE" -> "ESCALATE" by GUARDRAIL:PROMPT_INJECTION; refundAmount 5000 -> 35 by POLICY:MAX_REFUND_AMOUNT
 Next: Queued for human review; holding reply sent to customer.
-Trace: 8 LLM calls, 4 tool calls, 56 ms (mock)
+Trace: 7 LLM calls, 4 tool calls, 54 ms (mock)
 ────────────────────────────────────────────────────────────────────────
 Customer reply (llm):
 Subject: We are reviewing your refund request
@@ -80,20 +80,19 @@ seq kind      step                         detail
  1  guardrail input_validation             {"valid":true}
  3  guardrail injection_screen             {"flagged":false,"score":0,"signals":[]}
  5  llm       classify
- 7  llm       investigate                  -> get_customer_history {}
- 8  tool      get_customer_history         ok
- 9  llm       investigate                  -> lookup_transaction {"transactionId":"txn_1001"}
-10  tool      lookup_transaction           ok
-11  llm       investigate                  -> search_refund_policy {"query":"damaged item refund"}
-12  tool      search_refund_policy         ok
-13  llm       investigate                  -> check_refund_eligibility {"transactionId":"txn_1001"}
-14  tool      check_refund_eligibility     ok
-15  llm       investigate                  (no tool call -> investigation complete)
-17  llm       decide
-19  guardrail policy_enforcement           {"decision":"AUTO_APPROVE","refundAmount":45,"overrides":[]}
-21  llm       draft_reply
-22  guardrail reply_check                  {"attempt":1,"ok":true,"violations":[]}
-24  decision  final_decision               {"decision":"AUTO_APPROVE","refundAmount":45,"transactionId":"txn_1001",...}
+ 7  tool      get_customer_history         ok   (called by the orchestrator, not the model)
+ 8  llm       investigate                  -> lookup_transaction {"transactionId":"txn_1001"}
+ 9  tool      lookup_transaction           ok
+10  llm       investigate                  -> search_refund_policy {"query":"damaged item refund"}
+11  tool      search_refund_policy         ok
+12  llm       investigate                  -> check_refund_eligibility {"transactionId":"txn_1001"}
+13  tool      check_refund_eligibility     ok
+14  llm       investigate                  (no tool call -> investigation complete)
+16  llm       decide
+18  guardrail policy_enforcement           {"decision":"AUTO_APPROVE","refundAmount":45,"overrides":[]}
+20  llm       draft_reply
+21  guardrail reply_check                  {"attempt":1,"ok":true,"violations":[]}
+23  decision  final_decision               {"decision":"AUTO_APPROVE","refundAmount":45,"transactionId":"txn_1001",...}
 ```
 
 Each event is also written as one structured JSON log line on stderr (e-mails are masked):

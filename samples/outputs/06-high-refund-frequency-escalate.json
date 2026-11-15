@@ -28,17 +28,17 @@
     "body": "Hello Ben,\n\nThank you for your message about your cotton t-shirt. A specialist from our team will review your request and get back to you within 2 business days. You don't need to do anything else for now.\n\nKind regards,\nCustomer Care Team"
   },
   "validationErrors": [],
-  "summary": "Request req_06: ESCALATE 25.00 EUR on txn_1005 (changed_mind)\nWhy: customer has 3+ refunds in the last 90 days [RP-6]\nHuman review: required, queue=fraud-review\nGuardrails: none triggered\nNext: Queued for human review; holding reply sent to customer.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "summary": "Request req_06: ESCALATE 25.00 EUR on txn_1005 (changed_mind)\nWhy: customer has 3+ refunds in the last 90 days [RP-6]\nHuman review: required, queue=fraud-review\nGuardrails: none triggered\nNext: Queued for human review; holding reply sent to customer.\nTrace: 7 LLM calls, 4 tool calls, <n> ms (mock)",
   "trace": {
     "traceId": "<varies>",
-    "llmCalls": 8,
+    "llmCalls": 7,
     "toolCalls": 4,
     "durationMs": 0,
     "file": null
   },
   "meta": {
     "agentVersion": "0.1.0",
-    "promptVersion": "v1.2",
+    "promptVersion": "v1.3",
     "llm": "mock",
     "decidedAt": "<varies>"
   }

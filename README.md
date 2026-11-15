@@ -5,7 +5,7 @@ An AI agent that handles customer refund requests from start to finish. It reads
 Built with **TypeScript · LangGraph.js · OpenAI (function calling) · Zod · pino · Vitest**. Runs fully offline with a deterministic mock LLM, so everything in this README can be checked without an API key.
 
 ```bash
-npm install && npm run check                 # typecheck + 89 tests + 12 sample scenarios
+npm install && npm run check                 # typecheck + 96 tests + 12 sample scenarios
 # or, with only Docker installed:
 docker compose run --rm api npm run check
 ```
@@ -103,10 +103,10 @@ flowchart LR
 1. **validate_input**: Zod checks types, formats and lengths. The customer is resolved from the *authenticated email*, never from the message text.
 2. **screen_input**: regex signals (instruction override, role hijack, fake `system:` tags, delimiter escape, hidden zero-width characters…) produce a score. The text is also sanitized.
 3. **classify**: the LLM returns `{inScope, category, confidence, summary}`, validated by Zod. Out-of-scope requests stop here.
-4. **investigate**: the LLM plans and calls tools one step at a time: `get_customer_history` → `lookup_transaction` or `list_customer_transactions` → `search_refund_policy` → `check_refund_eligibility`. Tool results (not LLM summaries) are collected as findings. The loop has an iteration cap and blocks duplicate calls.
+4. **investigate**: the orchestrator first loads `get_customer_history` itself (models were seen skipping it). The LLM then plans and calls tools one step at a time: `lookup_transaction` or `list_customer_transactions` → `search_refund_policy` → `check_refund_eligibility`. Tool results (not LLM summaries) are collected as findings. The loop has an iteration cap and blocks duplicate calls.
 5. **decide**: the LLM proposes a decision as JSON, with a repair loop on invalid output.
-6. **enforce_policy**: re-fetches the transaction (checking ownership), **recomputes eligibility itself**, and applies the rules: the LLM may only tighten the outcome; amounts are capped at the policy maximum; anything flagged for injection is never auto-approved; a rejection with no policy basis goes to a human. Every change is recorded as an `override`.
-7. **draft_reply**: the LLM writes the reply for the *final* decision. The reply guard blocks promising unapproved refunds, leaking internal rules or risk signals, other people's emails, and links. After two failed attempts it uses a deterministic template.
+6. **enforce_policy**: re-fetches the transaction (checking ownership, and that it is the transaction the customer named, so the model cannot quietly switch to another purchase), **recomputes eligibility itself**, and applies the rules: the LLM may only tighten the outcome; amounts are capped at the policy maximum; anything flagged for injection is never auto-approved; a rejection with no policy basis goes to a human. Every change is recorded as an `override`.
+7. **draft_reply**: the LLM writes the reply for the *final* decision. The reply guard blocks promising unapproved refunds, refusals that talk about a refund, leaking internal rules or risk signals, other people's emails, and links. After two failed attempts it uses a deterministic template.
 8. **finalize**: assembles the result, validates it with `AgentResultSchema`, writes the trace and the decision log.
 
 ### Why LangGraph.js
@@ -200,8 +200,8 @@ Every run returns one JSON object validated by `AgentResultSchema` (`src/types.t
   "customerReply": { "subject": "We are reviewing your refund request", "body": "Hello Clara, ..." },
   "validationErrors": [],
   "summary": "Request req_05: ESCALATE 35.00 EUR on txn_1009 (damaged_item)\nWhy: ...",
-  "trace": { "traceId": "…", "llmCalls": 8, "toolCalls": 4, "durationMs": 56, "file": "traces/req_05.….json" },
-  "meta": { "agentVersion": "0.1.0", "promptVersion": "v1.2", "llm": "mock", "decidedAt": "…" }
+  "trace": { "traceId": "…", "llmCalls": 7, "toolCalls": 4, "durationMs": 56, "file": "traces/req_05.….json" },
+  "meta": { "agentVersion": "0.1.0", "promptVersion": "v1.3", "llm": "mock", "decidedAt": "…" }
 }
 ```
 
@@ -212,7 +212,7 @@ Every run returns one JSON object validated by `AgentResultSchema` (`src/types.t
 ```bash
 npm run check        # everything below in one go
 npm run typecheck    # tsc --strict, noUncheckedIndexedAccess
-npm test             # all 89 tests
+npm test             # all 96 tests
 npm run test:unit    # unit tests only
 npm run test:e2e     # end-to-end / integration only
 npm run samples      # runs samples/inputs, writes samples/outputs, compares with samples/expected
@@ -288,9 +288,9 @@ Offline result (mock LLM): 17 runs, 38 passed, 21 judge tests skipped. The eval 
 | Prompt hygiene | Static, versioned system prompts. User text only inside `<customer_message>` tags, explicitly marked as untrusted. Delimiter tags are stripped from user text, so it can't close the tag. |
 | Least-privilege tools | Tools get the customer from the orchestrator, not from the LLM. A foreign transaction returns the same `not_found` as a non-existent one (no enumeration). Arguments are schema-validated; unknown tools are rejected. |
 | Bounded agent loop | Max tool iterations, duplicate-call blocking, retry caps. |
-| Deterministic enforcement | The policy engine recomputes eligibility from source data. The LLM can only make the outcome stricter. Amounts are capped. All changes are logged as overrides. |
+| Deterministic enforcement | The policy engine recomputes eligibility from source data. The LLM can only make the outcome stricter, and cannot swap the purchase the customer named for another one. Amounts are capped. All changes are logged as overrides. |
 | Output validation | Zod on every LLM output, with a repair loop. The final result is schema-validated. |
-| Reply guard | No unapproved promises, internal rule ids, risk signals, foreign emails or links. Falls back to a template. |
+| Reply guard | No unapproved promises, no refund talk in refusals, no internal rule ids, risk signals, foreign emails or links. Falls back to a template. |
 | Fail closed | Any node error → `ESCALATE` to a human, no refund amount, template reply. |
 | PII in logs | Emails masked in traces and logs; long strings truncated. |
 

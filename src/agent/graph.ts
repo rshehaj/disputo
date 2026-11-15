@@ -6,7 +6,7 @@ import { enforceDecision } from '../guardrails/enforce.js';
 import { screenForInjection } from '../guardrails/injection.js';
 import { checkReply } from '../guardrails/replyGuard.js';
 import { callLlm, callStructured } from '../llm/reliability.js';
-import type { ChatMessage, LlmClient } from '../llm/types.js';
+import type { ChatMessage, LlmClient, ToolCall } from '../llm/types.js';
 import type { Tracer } from '../observability/tracer.js';
 import type { PolicyIndex } from '../policy/policyDocs.js';
 import { evaluateEligibility } from '../policy/rules.js';
@@ -174,6 +174,21 @@ export function buildAgentGraph(deps: GraphDeps) {
     ];
     const seenCalls = new Set<string>();
 
+    // Step 1 of the plan is always the same call, so the orchestrator makes it instead of
+    // trusting the model to (gpt-4o-mini often skipped it). It is added to the conversation
+    // as a normal tool call + result, so the model sees it and the trace records it.
+    const historyCall: ToolCall = { id: 'orchestrator_customer_history', name: 'get_customer_history', arguments: '{}' };
+    const history = await tracer.span('tool', historyCall.name, {}, () =>
+      executeTool(historyCall.name, historyCall.arguments, ctx),
+    );
+    seenCalls.add(`${historyCall.name}:${historyCall.arguments}`);
+    findings.toolCalls++;
+    if (history.ok) collectFinding(findings, historyCall.name, history.result);
+    messages.push(
+      { role: 'assistant', content: null, toolCalls: [historyCall] },
+      { role: 'tool', toolCallId: historyCall.id, content: JSON.stringify(history.ok ? history.result : { error: history.error }) },
+    );
+
     for (let i = 0; i < config.maxToolIterations; i++) {
       const res = await callLlm(llm, { purpose: 'investigate', messages, tools: TOOL_SPECS }, tracer);
       messages.push({ role: 'assistant', content: res.content, toolCalls: res.toolCalls });
@@ -270,6 +285,7 @@ export function buildAgentGraph(deps: GraphDeps) {
       eligibility,
       screening: s.screening!,
       knownPolicyRefs: policy.ids,
+      requestedTransactionId: s.request!.transactionId ?? null,
     });
     tracer.record('guardrail', 'policy_enforcement', {
       input: { proposed: proposal.decision, proposedAmount: proposal.refundAmount, engine: eligibility?.outcome ?? null },

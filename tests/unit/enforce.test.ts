@@ -28,6 +28,7 @@ const input = (over: Partial<EnforcementInput> = {}, t: Transaction = txn): Enfo
   eligibility: evaluateEligibility({ transaction: t, customer, category: 'damaged_item', now, autoApproveLimit: 200, duplicates: [] }),
   screening: clean,
   knownPolicyRefs: ['RP-1', 'RP-2'],
+  requestedTransactionId: null,
   ...over,
 });
 
@@ -74,6 +75,21 @@ describe('enforceDecision', () => {
     const r = enforceDecision(input({ verifiedTransaction: null, eligibility: null }));
     expect(r).toMatchObject({ decision: 'NEED_MORE_INFO', transactionId: null, refundAmount: null });
     expect(r.reasonCodes).toEqual(['TRANSACTION_NOT_FOUND']);
+  });
+
+  it('refuses to swap the transaction the customer named for a different one', () => {
+    // Customer named txn_other (not theirs); the model settled on their own txn_1 instead.
+    const r = enforceDecision(input({ requestedTransactionId: 'txn_other' }));
+    expect(r).toMatchObject({ decision: 'NEED_MORE_INFO', transactionId: null, refundAmount: null });
+    expect(r.reasonCodes).toEqual(['TRANSACTION_NOT_FOUND']);
+    expect(r.overrides).toContainEqual({
+      field: 'transactionId', from: 'txn_1', to: null, rule: 'ENFORCE:REQUESTED_TRANSACTION_MISMATCH',
+    });
+  });
+
+  it('accepts the transaction when it is the one the customer named', () => {
+    const r = enforceDecision(input({ requestedTransactionId: 'txn_1' }));
+    expect(r).toMatchObject({ decision: 'AUTO_APPROVE', transactionId: 'txn_1', overrides: [] });
   });
 
   it('asks for more info when the customer is unknown', () => {

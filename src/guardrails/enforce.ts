@@ -19,6 +19,8 @@ export interface EnforcementInput {
   eligibility: EligibilityResult | null;
   screening: InjectionScreen;
   knownPolicyRefs: string[];
+  /** Transaction id the customer named in the request (null if they gave none). */
+  requestedTransactionId: string | null;
 }
 
 export interface EnforcedDecision {
@@ -44,7 +46,7 @@ const isReasonCode = (s: string): s is ReasonCode => (REASON_CODES as readonly s
  * Principle: the LLM may make a decision MORE conservative, never LESS.
  */
 export function enforceDecision(input: EnforcementInput): EnforcedDecision {
-  const { proposal, customer, verifiedTransaction: txn, eligibility, screening } = input;
+  const { proposal, customer, screening, requestedTransactionId } = input;
   const overrides: Override[] = [];
   const reasons = new Set<ReasonCode>();
   const refs = new Set<string>();
@@ -55,6 +57,16 @@ export function enforceDecision(input: EnforcementInput): EnforcedDecision {
 
   if (screening.flagged) reasons.add('PROMPT_INJECTION_SUSPECTED');
 
+  // 0. The decision must be about the purchase the customer named. If that id is not theirs,
+  //    the model must not substitute another of their purchases (it would refund the wrong item).
+  let txn = input.verifiedTransaction;
+  let eligibility = input.eligibility;
+  if (requestedTransactionId && txn && txn.id !== requestedTransactionId) {
+    override('transactionId', txn.id, null, 'ENFORCE:REQUESTED_TRANSACTION_MISMATCH');
+    txn = null;
+    eligibility = null;
+  }
+
   // 1. Identity and ownership checks
   if (!customer || !txn || !eligibility) {
     const reason: ReasonCode = !customer
@@ -64,7 +76,9 @@ export function enforceDecision(input: EnforcementInput): EnforcedDecision {
         : 'TRANSACTION_NOT_FOUND';
     reasons.add(reason);
     override('decision', proposal.decision, 'NEED_MORE_INFO', `ENFORCE:${reason}`);
-    if (proposal.transactionId) override('transactionId', proposal.transactionId, null, 'ENFORCE:OWNERSHIP');
+    if (proposal.transactionId && !overrides.some((o) => o.field === 'transactionId')) {
+      override('transactionId', proposal.transactionId, null, 'ENFORCE:OWNERSHIP');
+    }
     if (proposal.refundAmount !== null) override('refundAmount', proposal.refundAmount, null, 'ENFORCE:NO_VERIFIED_TXN');
     return {
       decision: 'NEED_MORE_INFO',

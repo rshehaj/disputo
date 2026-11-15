@@ -14,6 +14,9 @@ export interface ReplyGuardResult {
 const PROMISES_REFUND =
   /\b(refund (?:has been|was|is being|is|will be) (?:approved|issued|processed|sent)|we(?: have|'ve)? (?:issued|processed|approved) (?:a|your|the) refund|you will (?:receive|get) (?:a|your) refund|we will refund)\b/i;
 
+/** A refusal is for messages that are not about a refund, so it must not talk about "your refund". */
+const REFUND_REQUEST_MENTION = /\b(?:your|the|this) refund(?: request)?\b|\brefund request\b/i;
+
 const INTERNAL_LEAKS: Array<[string, RegExp]> = [
   ['policy_rule_id', /\bRP-\d+\b/],
   ['reason_code', /\b[A-Z]{3,}(?:_[A-Z]+){1,}\b/],
@@ -31,6 +34,9 @@ export function checkReply(reply: ReplyDraft, ctx: ReplyGuardContext): ReplyGuar
 
   if (ctx.decision !== 'AUTO_APPROVE' && PROMISES_REFUND.test(text)) {
     violations.push('promises_refund_not_approved');
+  }
+  if (ctx.decision === 'REFUSED' && REFUND_REQUEST_MENTION.test(text)) {
+    violations.push('refusal_mentions_refund');
   }
   if (ctx.decision === 'AUTO_APPROVE' && ctx.refundAmount !== null) {
     const amount = ctx.refundAmount.toFixed(2);

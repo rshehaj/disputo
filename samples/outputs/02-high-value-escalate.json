@@ -28,17 +28,17 @@
     "body": "Hello Ana,\n\nThank you for your message about your ergonomic office chair. A specialist from our team will review your request and get back to you within 2 business days. You don't need to do anything else for now.\n\nKind regards,\nCustomer Care Team"
   },
   "validationErrors": [],
-  "summary": "Request req_02: ESCALATE 849.00 EUR on txn_1002 (damaged_item)\nWhy: amount is above the auto-approval limit [RP-2]\nHuman review: required, queue=refunds-l2\nGuardrails: none triggered\nNext: Queued for human review; holding reply sent to customer.\nTrace: 8 LLM calls, 4 tool calls, <n> ms (mock)",
+  "summary": "Request req_02: ESCALATE 849.00 EUR on txn_1002 (damaged_item)\nWhy: amount is above the auto-approval limit [RP-2]\nHuman review: required, queue=refunds-l2\nGuardrails: none triggered\nNext: Queued for human review; holding reply sent to customer.\nTrace: 7 LLM calls, 4 tool calls, <n> ms (mock)",
   "trace": {
     "traceId": "<varies>",
-    "llmCalls": 8,
+    "llmCalls": 7,
     "toolCalls": 4,
     "durationMs": 0,
     "file": null
   },
   "meta": {
     "agentVersion": "0.1.0",
-    "promptVersion": "v1.2",
+    "promptVersion": "v1.3",
     "llm": "mock",
     "decidedAt": "<varies>"
   }
