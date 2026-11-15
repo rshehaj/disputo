@@ -1,0 +1,28 @@
+# Runs offline with the deterministic mock LLM by default.
+# Put OPENAI_API_KEY (and optionally LLM_MODE=openai) in .env to use OpenAI.
+x-app: &app
+  build: .
+  image: disputo:local
+  env_file:
+    - path: .env
+      required: false
+  volumes:
+    - traces:/app/traces
+    - decisions:/app/data/runtime
+
+services:
+  # HTTP API: POST /v1/refund-requests, GET /healthz
+  api:
+    <<: *app
+    ports:
+      - "${HOST_PORT:-3000}:3000"
+
+  # One-off CLI runs: docker compose run --rm agent samples/inputs/01-damaged-item-auto-approve.json --mock
+  agent:
+    <<: *app
+    profiles: [cli]
+    entrypoint: ["node_modules/.bin/tsx", "src/cli.ts"]
+
+volumes:
+  traces:
+  decisions:

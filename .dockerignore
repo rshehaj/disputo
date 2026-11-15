@@ -1,0 +1,12 @@
+node_modules
+.git
+.github
+.idea
+.env
+traces
+data/runtime
+coverage
+*.log
+Dockerfile
+compose.yaml
+.dockerignore
