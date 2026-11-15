@@ -39,11 +39,28 @@ describe('agent resilience against bad or hostile model output', () => {
           reasonCodes: ['WITHIN_POLICY'], policyRefs: [], rationale: 'x', confidence: 1,
         }),
     });
-    // Request comes from Dritan; txn_1002 belongs to Ana.
-    const r = await runAgent(sample('07-duplicate-charge-auto-approve'), makeDeps(llm));
+    // Request comes from Dritan without a transaction id; txn_1002 belongs to Ana.
+    const { transactionId: _named, ...noId } = sample('07-duplicate-charge-auto-approve');
+    const r = await runAgent(noId, makeDeps(llm));
     expect(r.decision).toBe('NEED_MORE_INFO');
     expect(r.refundAmount).toBeNull();
     expect(r.guardrails.overrides.map((o) => o.field)).toEqual(['decision', 'transactionId', 'refundAmount']);
+  });
+
+  it('corrects a foreign transaction back to the one the customer named', async () => {
+    const llm = new ScriptedLlm({
+      decide: () =>
+        jsonResponse({
+          decision: 'AUTO_APPROVE', transactionId: 'txn_1002', refundAmount: 849,
+          reasonCodes: ['WITHIN_POLICY'], policyRefs: [], rationale: 'x', confidence: 1,
+        }),
+    });
+    // Dritan named his own txn_1007; the model proposed Ana's txn_1002.
+    const r = await runAgent(sample('07-duplicate-charge-auto-approve'), makeDeps(llm));
+    expect(r).toMatchObject({ transactionId: 'txn_1007', refundAmount: 19.99 });
+    expect(r.guardrails.overrides).toContainEqual(
+      expect.objectContaining({ field: 'transactionId', from: 'txn_1002', to: 'txn_1007', rule: 'ENFORCE:OWNERSHIP' }),
+    );
   });
 
   it('does not refund a different purchase than the one the customer named', async () => {
@@ -59,7 +76,65 @@ describe('agent resilience against bad or hostile model output', () => {
     const r = await runAgent(sample('08-foreign-transaction-need-info'), makeDeps(llm));
     expect(r).toMatchObject({ decision: 'NEED_MORE_INFO', transactionId: null, refundAmount: null });
     expect(r.reasonCodes).toContain('TRANSACTION_NOT_FOUND');
-    expect(r.guardrails.overrides.map((o) => o.rule)).toContain('ENFORCE:REQUESTED_TRANSACTION_MISMATCH');
+    // The named id is verified first (and is not his), so the model's pick is never considered.
+    expect(r.guardrails.overrides).toContainEqual(
+      expect.objectContaining({ field: 'transactionId', from: 'txn_1008', to: null, rule: 'ENFORCE:OWNERSHIP' }),
+    );
+  });
+
+  it('decides on the named transaction when the model picks another of the customer\'s own', async () => {
+    // Ana named her mug set (txn_1001); the model drifted to her office chair (txn_1002).
+    const llm = new ScriptedLlm({
+      decide: () =>
+        jsonResponse({
+          decision: 'AUTO_APPROVE', transactionId: 'txn_1002', refundAmount: 849,
+          reasonCodes: ['WITHIN_POLICY'], policyRefs: ['RP-1'], rationale: 'damaged item', confidence: 0.9,
+        }),
+    });
+    const r = await runAgent(sample('01-damaged-item-auto-approve'), makeDeps(llm));
+    expect(r).toMatchObject({ decision: 'AUTO_APPROVE', transactionId: 'txn_1001', refundAmount: 45 });
+    expect(r.guardrails.overrides).toContainEqual(
+      expect.objectContaining({ field: 'transactionId', from: 'txn_1002', to: 'txn_1001', rule: 'ENFORCE:OWNERSHIP' }),
+    );
+  });
+
+  it('does not describe a dropped transaction in the reply', async () => {
+    let replyContext = '';
+    const llm = new ScriptedLlm({
+      decide: () =>
+        jsonResponse({
+          decision: 'AUTO_APPROVE', transactionId: 'txn_1008', refundAmount: 120,
+          reasonCodes: ['WITHIN_POLICY'], policyRefs: ['RP-1'], rationale: 'damaged item', confidence: 0.9,
+        }),
+      draft_reply: (req, _n, base) => {
+        replyContext = req.messages.find((m) => m.role === 'user')?.content ?? '';
+        return base.complete(req);
+      },
+    });
+    const r = await runAgent(sample('08-foreign-transaction-need-info'), makeDeps(llm));
+    expect(r.decision).toBe('NEED_MORE_INFO');
+    expect(replyContext).toContain('"transactionDescription":null');
+    expect(replyContext).not.toContain('headphones');
+    expect(r.customerReply?.body).not.toMatch(/headphones/i);
+  });
+
+  it('blocks a repeated history call even with different whitespace', async () => {
+    const steps = [
+      { name: 'get_customer_history', arguments: '{ }' },
+      { name: 'lookup_transaction', arguments: '{"transactionId":"txn_1001"}' },
+      { name: 'check_refund_eligibility', arguments: '{"transactionId":"txn_1001"}' },
+    ];
+    const llm = new ScriptedLlm({
+      investigate: (_req, n) => {
+        const step = steps[n];
+        return step
+          ? { content: null, toolCalls: [{ id: `s${n}`, ...step }] }
+          : { content: 'INVESTIGATION COMPLETE transactionId=txn_1001 note=ok', toolCalls: [] };
+      },
+    });
+    const r = await runAgent(sample('01-damaged-item-auto-approve'), makeDeps(llm));
+    expect(r.trace.toolCalls).toBe(3); // orchestrator history + lookup + eligibility; the repeat is skipped
+    expect(r.decision).toBe('AUTO_APPROVE');
   });
 
   it('loads the customer history even when the model skips that step', async () => {

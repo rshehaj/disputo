@@ -181,7 +181,7 @@ export function buildAgentGraph(deps: GraphDeps) {
     const history = await tracer.span('tool', historyCall.name, {}, () =>
       executeTool(historyCall.name, historyCall.arguments, ctx),
     );
-    seenCalls.add(`${historyCall.name}:${historyCall.arguments}`);
+    seenCalls.add(callKey(historyCall.name, historyCall.arguments));
     findings.toolCalls++;
     if (history.ok) collectFinding(findings, historyCall.name, history.result);
     messages.push(
@@ -197,7 +197,7 @@ export function buildAgentGraph(deps: GraphDeps) {
         return { findings };
       }
       for (const call of res.toolCalls) {
-        const key = `${call.name}:${call.arguments}`;
+        const key = callKey(call.name, call.arguments);
         let content: string;
         if (seenCalls.has(key)) {
           tracer.record('guardrail', 'duplicate_tool_call_blocked', { input: { name: call.name } });
@@ -263,7 +263,8 @@ export function buildAgentGraph(deps: GraphDeps) {
     const proposal = s.proposal!;
     const customer = s.customer;
     // Re-derive everything from the source of truth instead of trusting tool output relayed by the LLM.
-    const candidateId = proposal.transactionId ?? s.findings.transaction?.id ?? s.request!.transactionId ?? null;
+    // The id the customer named wins: the model may not substitute another of their purchases.
+    const candidateId = s.request!.transactionId ?? proposal.transactionId ?? s.findings.transaction?.id ?? null;
     const verified = customer && candidateId ? repo.getTransactionForCustomer(customer.id, candidateId) : null;
     const eligibility =
       verified && customer
@@ -291,7 +292,8 @@ export function buildAgentGraph(deps: GraphDeps) {
       input: { proposed: proposal.decision, proposedAmount: proposal.refundAmount, engine: eligibility?.outcome ?? null },
       output: { decision: enforced.decision, refundAmount: enforced.refundAmount, overrides: enforced.overrides },
     });
-    return { verifiedTransaction: verified, outcome: { status: 'completed', ...enforced } };
+    // If enforcement dropped the transaction, the reply must not describe it either.
+    return { verifiedTransaction: enforced.transactionId ? verified : null, outcome: { status: 'completed', ...enforced } };
   });
 
   const failSafe = node('fail_safe', async (s) => {
@@ -454,6 +456,11 @@ function collectFinding(f: Findings, tool: string, result: unknown): void {
     case 'list_customer_transactions':
       break;
   }
+}
+
+/** Dedup key that ignores whitespace in the arguments (`{ }` and `{}` are the same call). */
+function callKey(name: string, args: string): string {
+  return `${name}:${JSON.stringify(safeJson(args))}`;
 }
 
 function safeJson(text: string): unknown {
