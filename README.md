@@ -10,6 +10,25 @@ npm install && npm run check                 # lint + typecheck + 129 tests + 12
 docker compose run --rm api npm run check
 ```
 
+## Index
+
+1. [Problem statement (business context)](#1-problem-statement-business-context)
+2. [What the agent does](#2-what-the-agent-does)
+3. [Business cases covered](#3-business-cases-covered)
+4. [Architecture](#4-architecture)
+   - [Why LangGraph.js](#why-langgraphjs)
+5. [Setup (local run)](#5-setup-local-run)
+   - [Option A: Docker](#option-a-docker-no-nodejs-needed)
+   - [Option B: Node.js](#option-b-nodejs)
+6. [Output contract](#6-output-contract)
+7. [How to test and verify](#7-how-to-test-and-verify)
+   - [Evaluation with DeepEval](#evaluation-with-deepeval)
+8. [Guardrails and security](#8-guardrails-and-security-defense-in-depth)
+9. [Trade-offs, limitations, next steps](#9-trade-offs-limitations-next-steps)
+10. [Real-world usage](#10-real-world-usage)
+- [Project structure](#project-structure)
+- [License](#license)
+
 ---
 
 ## 1. Problem statement (business context)
